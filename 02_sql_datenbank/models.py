@@ -27,3 +27,15 @@ class User(db.Model):
 
     def __repr__(self) -> str:
         return f"<User {self.username!r}>"
+
+
+class Pony(db.Model):
+    """Pony im Ponyverkauf (öffentlicher Marktplatz)."""
+    __tablename__ = "ponies"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    breed = db.Column(db.String(80), nullable=False)
+    price = db.Column(db.Integer, nullable=False, default=0)
+    description = db.Column(db.String(1000), nullable=False, default="")
+    seller = db.Column(db.String(80), nullable=False, default="Ranch")

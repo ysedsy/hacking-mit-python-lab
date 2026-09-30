@@ -27,6 +27,10 @@ app = Flask(__name__)
 # In der Übung ok; produktiv NIE hart im Code -> os.environ (siehe Ordner 14 LFI!).
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
+# Ponyverkauf (statische Variante, da Ordner 01 noch keine SQL-DB hat).
+from ponies import bp as ponies_bp  # noqa: E402
+app.register_blueprint(ponies_bp)
+
 
 # --- Mini-"Datenbank": JSON-Datei -------------------------------------------
 def load_users() -> dict:

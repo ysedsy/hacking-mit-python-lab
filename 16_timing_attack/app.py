@@ -83,8 +83,11 @@ def create_app() -> Flask:
         )
         resp.headers["X-Content-Type-Options"] = "nosniff"
         return resp
+    from ponies import bp as ponies_bp, seed_ponies
+    app.register_blueprint(ponies_bp)
     with app.app_context():
         db.create_all()
+        seed_ponies()
 
     register_routes(app)
 

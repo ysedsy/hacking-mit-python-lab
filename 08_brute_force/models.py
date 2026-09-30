@@ -30,3 +30,15 @@ class Post(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     content = db.Column(db.String(500), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Pony(db.Model):
+    """Pony im Ponyverkauf (öffentlicher Marktplatz)."""
+    __tablename__ = "ponies"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    breed = db.Column(db.String(80), nullable=False)
+    price = db.Column(db.Integer, nullable=False, default=0)
+    description = db.Column(db.String(1000), nullable=False, default="")
+    seller = db.Column(db.String(80), nullable=False, default="Ranch")

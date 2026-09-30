@@ -43,3 +43,15 @@ class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     secret_text = db.Column(db.String(500), nullable=False)
+
+
+class Pony(db.Model):
+    """Pony im Ponyverkauf (öffentlicher Marktplatz)."""
+    __tablename__ = "ponies"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    breed = db.Column(db.String(80), nullable=False)
+    price = db.Column(db.Integer, nullable=False, default=0)
+    description = db.Column(db.String(1000), nullable=False, default="")
+    seller = db.Column(db.String(80), nullable=False, default="Ranch")

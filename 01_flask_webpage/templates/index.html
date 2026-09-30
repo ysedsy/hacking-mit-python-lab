@@ -1,12 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Start · Hacking-Lab{% endblock %}
+{% block title %}Cowboy-Forum – Ponyhandel im Wilden Web{% endblock %}
 {% block content %}
   <h1>🤠 Willkommen im Cowboy-Forum</h1>
-  <p>Ordner 01: Flask-Webpage mit Login/Register, Sessions und WTForms-Validierung.</p>
-  {% if user %}
-    <p>Eingeloggt als <strong>{{ user }}</strong>.</p>
+  <p>Der Treffpunkt für Rancher, Reiter und Pferdenarren. Feilsche um Ponys,
+     schwing dich in den Sattel und tausch dich am Anschlagbrett aus.</p>
+  {% if session.get('user') %}
+    <p>Schön, dass du wieder da bist, <strong>{{ session['user'] }}</strong>!
+       Schau doch mal in den <a href="{{ url_for('ponies.list_ponys') }}">Ponyverkauf</a>.</p>
   {% else %}
-    <p><a href="{{ url_for('register') }}">Registriere</a> dich oder
-       <a href="{{ url_for('login') }}">logge dich ein</a>.</p>
+    <p>Neu in der Stadt? <a href="{{ url_for('register') }}">Heuer an</a> oder
+       <a href="{{ url_for('login') }}">reite ein</a>.</p>
   {% endif %}
+
+  <h2>🐴 Frisch im Stall</h2>
+  <div class="pony-grid">
+    {% for p in featured_ponies %}
+      <a class="pony-card" href="{{ url_for('ponies.pony_detail', pid=p.id) }}">
+        <strong>{{ p.name }}</strong>
+        <small>{{ p.breed }}</small>
+        <span class="price">{{ p.price }} Taler</span>
+      </a>
+    {% else %}
+      <p>Der Stall ist gerade leer.</p>
+    {% endfor %}
+  </div>
+  <p><a href="{{ url_for('ponies.list_ponys') }}">→ Alle Ponys im Verkauf ansehen</a></p>
 {% endblock %}

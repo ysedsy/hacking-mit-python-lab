@@ -35,8 +35,11 @@ def create_app() -> Flask:
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
+    from ponies import bp as ponies_bp, seed_ponies
+    app.register_blueprint(ponies_bp)
     with app.app_context():
         db.create_all()
+        seed_ponies()
 
     register_routes(app)
 

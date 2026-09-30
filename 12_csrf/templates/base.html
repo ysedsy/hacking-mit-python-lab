@@ -38,6 +38,7 @@
     nav.trail a:hover{border-bottom-color:var(--gold);color:#fff}
     h1{font-family:"Rye",serif;color:var(--leather-dark);
        text-shadow:1px 1px 0 #0002;margin-top:1.4rem}
+    h2{font-family:"Rye",serif;color:var(--leather-dark);margin-top:1.6rem}
     .flash{padding:.55rem .8rem;border-radius:.3rem;margin:.6rem 0;
        border:2px solid #0003;font-weight:bold}
     .flash.success{background:#dff0d0;color:#2f5217}
@@ -45,7 +46,7 @@
     .flash.warning{background:#f7e7bf;color:#6b4a06}
     .flash.info   {background:#d8ecf3;color:#0f4a5a}
     label{display:block;margin-top:.8rem;font-weight:bold;color:var(--leather-dark)}
-    input[type=text],input[type=password],textarea{
+    input[type=text],input[type=password],input[type=search],textarea{
        width:100%;padding:.55rem;border:2px solid var(--leather);
        border-radius:.3rem;background:#fffdf5;font-family:inherit;font-size:1rem}
     .errors{color:var(--saloon-red);font-size:.9rem;margin:.25rem 0;font-weight:bold}
@@ -62,30 +63,38 @@
        overflow:auto;white-space:pre-wrap}
     table{background:#fffdf5}
     a{color:var(--saloon-red)}
+    /* Ponyverkauf */
+    .pony-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9rem,1fr));
+       gap:.7rem;margin:.8rem 0}
+    .pony-card{display:flex;flex-direction:column;gap:.15rem;text-decoration:none;
+       color:var(--ink);background:#fffdf5;border:2px solid var(--leather);
+       border-radius:.4rem;padding:.6rem .7rem;box-shadow:2px 2px 0 #0002}
+    .pony-card:hover{filter:brightness(1.03);border-color:var(--gold)}
+    .pony-card strong{font-size:1.05rem}
+    .pony-card small{color:#7a5a3a}
+    .price{margin-top:.2rem;font-weight:bold;color:var(--saloon-red)}
     footer.dust{text-align:center;color:#7a5a3a;font-size:.8rem;margin-top:2rem}
   </style>
 </head>
 <body>
   <header class="saloon">
     <div class="inner">
-      <h1 class="brand">🤠 Cowboy-Forum <small>Wo die schnellsten Cursor im Wilden Web reiten</small></h1>
+      <h1 class="brand">🤠 Cowboy-Forum <small>Ponyhandel &amp; Treffpunkt im Wilden Web</small></h1>
       <nav class="trail">
         <a href="{{ url_for('index') }}">🏠 Saloon</a>
+        {% if has_endpoint is defined and has_endpoint('ponies.list_ponys') %}
+          <a href="{{ url_for('ponies.list_ponys') }}">🐴 Ponyverkauf</a>{% endif %}
         {% if session.get('user') %}
           {% if has_endpoint is defined and has_endpoint('board') %}
             <a href="{{ url_for('board') }}">📜 Anschlagbrett</a>{% endif %}
-          {% if has_endpoint is defined and has_endpoint('search') %}
-            <a href="{{ url_for('search') }}">🔍 Steckbrief-Suche</a>{% endif %}
           {% if has_endpoint is defined and has_endpoint('disclaimer') %}
             <a href="{{ url_for('disclaimer') }}">📄 Kleingedrucktes</a>{% endif %}
           {% if has_endpoint is defined and has_endpoint('dashboard') %}
-            <a href="{{ url_for('dashboard') }}">⭐ Mein Ranch</a>{% endif %}
+            <a href="{{ url_for('dashboard') }}">⭐ Meine Ranch</a>{% endif %}
           <a href="{{ url_for('logout') }}">🚪 Abhauen ({{ session['user'] }})</a>
         {% else %}
           <a href="{{ url_for('login') }}">🐎 Einreiten</a>
           <a href="{{ url_for('register') }}">✍️ Anheuern</a>
-          {% if has_endpoint is defined and has_endpoint('login_legacy') %}
-            <a href="{{ url_for('login_legacy') }}">🚪 Hintertür ⚠️</a>{% endif %}
         {% endif %}
       </nav>
     </div>
@@ -98,7 +107,7 @@
       {% endfor %}
     {% endwith %}
     {% block content %}{% endblock %}
-    <footer class="dust">— Cowboy-Forum · Hacking-mit-Python-Lab · Howdy, Partner —</footer>
+    <footer class="dust">— Cowboy-Forum · Ponyhandel seit 1873 · Howdy, Partner —</footer>
   </div>
 </body>
 </html>
