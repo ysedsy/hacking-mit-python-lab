@@ -1,0 +1,109 @@
+"""Ordner 01 — Webpage mit Flask.
+
+Feature-Stand:
+  * Login / Register
+  * Sessions (server-signiertes Cookie via SECRET_KEY)
+  * WTForms mit Feld-Validierung (siehe forms.py)
+  * Passwörter werden gehasht gespeichert (Werkzeug PBKDF2)
+
+Speicherung: hier noch eine einfache JSON-Datei. In Ordner 02 wird das durch eine
+echte SQL-Datenbank (SQLAlchemy) ersetzt.
+"""
+import json
+import os
+from functools import wraps
+
+from flask import (
+    Flask, render_template, redirect, url_for, session, flash, abort
+)
+from werkzeug.security import generate_password_hash, check_password_hash
+
+from forms import RegisterForm, LoginForm
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+USERS_FILE = os.path.join(BASE_DIR, "users.json")
+
+app = Flask(__name__)
+# In der Übung ok; produktiv NIE hart im Code -> os.environ (siehe Ordner 14 LFI!).
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+
+
+# --- Mini-"Datenbank": JSON-Datei -------------------------------------------
+def load_users() -> dict:
+    if not os.path.exists(USERS_FILE):
+        return {}
+    with open(USERS_FILE, "r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def save_users(users: dict) -> None:
+    with open(USERS_FILE, "w", encoding="utf-8") as fh:
+        json.dump(users, fh, indent=2, ensure_ascii=False)
+
+
+# --- Auth-Helfer ------------------------------------------------------------
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if "user" not in session:
+            flash("Bitte zuerst einloggen.", "warning")
+            return redirect(url_for("login"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+# --- Routen -----------------------------------------------------------------
+@app.route("/")
+def index():
+    return render_template("index.html", user=session.get("user"))
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        users = load_users()
+        uname = form.username.data.strip()
+        if uname in users:
+            flash("Benutzername ist bereits vergeben.", "danger")
+        else:
+            users[uname] = {
+                "password_hash": generate_password_hash(form.password.data),
+            }
+            save_users(users)
+            flash("Registrierung erfolgreich. Bitte einloggen.", "success")
+            return redirect(url_for("login"))
+    return render_template("register.html", form=form)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        users = load_users()
+        user = users.get(form.username.data.strip())
+        if user and check_password_hash(user["password_hash"], form.password.data):
+            session.clear()
+            session["user"] = form.username.data.strip()
+            flash("Willkommen zurück!", "success")
+            return redirect(url_for("dashboard"))
+        flash("Falscher Benutzername oder Passwort.", "danger")
+    return render_template("login.html", form=form)
+
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    return render_template("dashboard.html", user=session["user"])
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("Ausgeloggt.", "info")
+    return redirect(url_for("index"))
+
+
+if __name__ == "__main__":
+    # Nur lokal! debug=True nur in der Lernumgebung.
+    app.run(host="127.0.0.1", port=5000, debug=True)

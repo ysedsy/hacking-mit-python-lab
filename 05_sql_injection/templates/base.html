@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Hacking-Lab{% endblock %}</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto;
+           padding: 0 1rem; line-height: 1.5; }
+    nav a { margin-right: 1rem; }
+    .flash { padding: .5rem .75rem; border-radius: .4rem; margin: .5rem 0; }
+    .flash.success { background: #d1e7dd; color: #0f5132; }
+    .flash.danger  { background: #f8d7da; color: #842029; }
+    .flash.warning { background: #fff3cd; color: #664d03; }
+    .flash.info    { background: #cff4fc; color: #055160; }
+    label { display:block; margin-top:.75rem; font-weight:600; }
+    input[type=text], input[type=password] { width:100%; padding:.5rem;
+           box-sizing:border-box; }
+    .errors { color:#842029; font-size:.9rem; margin:.25rem 0; }
+    button { margin-top:1rem; padding:.5rem 1rem; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="{{ url_for('index') }}">Start</a>
+    {% if session.get('user') %}
+      <a href="{{ url_for('board') }}">Board</a>
+      <a href="{{ url_for('search') }}">Suche ⚠️</a>
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('logout') }}">Logout ({{ session['user'] }})</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">Login</a>
+      <a href="{{ url_for('register') }}">Register</a>
+    {% endif %}
+  </nav>
+  <hr>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Board · Hacking-Lab{% endblock %}
+{% block content %}
+  <h1>Board</h1>
+  <p>Beiträge von allen Usern.</p>
+
+  <form method="post">
+    {{ form.hidden_tag() }}
+    {{ form.content.label }}
+    {{ form.content(rows=3, style="width:100%;box-sizing:border-box") }}
+    {% for e in form.content.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+    {{ form.submit() }}
+  </form>
+
+  <hr>
+  {% for post in posts %}
+    <article style="border:1px solid #8884;border-radius:.4rem;padding:.5rem .75rem;margin:.5rem 0">
+      <strong>{{ post.author.username }}</strong>
+      <small>· {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+      {# Sicher: Jinja2 escaped standardmäßig. Ordner 10 macht hieraus |safe = XSS. #}
+      <p style="margin:.4rem 0 0">{{ post.content }}</p>
+    </article>
+  {% else %}
+    <p>Noch keine Beiträge.</p>
+  {% endfor %}
+{% endblock %}

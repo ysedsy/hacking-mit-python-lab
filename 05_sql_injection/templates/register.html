@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Register · Hacking-Lab{% endblock %}
+{% block content %}
+  <h1>Registrieren</h1>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}  {# CSRF-Token + verdeckte Felder — Thema Ordner 12 #}
+    <div>
+      {{ form.username.label }}
+      {{ form.username() }}
+      {% for e in form.username.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+    </div>
+    <div>
+      {{ form.password.label }}
+      {{ form.password() }}
+      {% for e in form.password.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+    </div>
+    <div>
+      {{ form.confirm.label }}
+      {{ form.confirm() }}
+      {% for e in form.confirm.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+    </div>
+    {{ form.submit() }}
+  </form>
+{% endblock %}

@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+*.db
+users.json
+.secrets.baseline
