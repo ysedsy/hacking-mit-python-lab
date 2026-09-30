@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}2FA · Hacking-Lab{% endblock %}
+{% block content %}
+  <h1>Zwei-Faktor-Bestätigung</h1>
+  <p>Gib den aktuellen 6-stelligen Code aus deiner Authenticator-App ein.</p>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ form.code.label }}
+    {{ form.code(inputmode="numeric", autocomplete="one-time-code") }}
+    {% for e in form.code.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+    {{ form.submit() }}
+  </form>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}2FA einrichten · Hacking-Lab{% endblock %}
+{% block content %}
+  <h1>Zwei-Faktor-Authentifizierung einrichten</h1>
+  <p>1. Scanne den QR-Code mit deiner Authenticator-App
+     (Google Authenticator, Aegis, 2FAS, ...).</p>
+  <img src="{{ qr }}" alt="TOTP QR-Code" width="200" height="200"
+       style="background:#fff;padding:.5rem;border-radius:.4rem">
+  <p>Falls du den Code nicht scannen kannst, gib dieses Secret manuell ein:</p>
+  <pre style="user-select:all;background:#8881;padding:.5rem;border-radius:.4rem">{{ secret }}</pre>
+
+  <p>2. Gib den aktuell angezeigten 6-stelligen Code ein, um 2FA zu aktivieren:</p>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ form.code.label }}
+    {{ form.code(inputmode="numeric", autocomplete="one-time-code") }}
+    {% for e in form.code.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+    {{ form.submit() }}
+  </form>
+{% endblock %}

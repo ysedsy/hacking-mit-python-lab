@@ -3,41 +3,105 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Hacking-Lab{% endblock %}</title>
+  <title>{% block title %}Cowboy-Forum{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rye&family=Special+Elite&display=swap" rel="stylesheet">
   <style>
-    :root { color-scheme: light dark; }
-    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto;
-           padding: 0 1rem; line-height: 1.5; }
-    nav a { margin-right: 1rem; }
-    .flash { padding: .5rem .75rem; border-radius: .4rem; margin: .5rem 0; }
-    .flash.success { background: #d1e7dd; color: #0f5132; }
-    .flash.danger  { background: #f8d7da; color: #842029; }
-    .flash.warning { background: #fff3cd; color: #664d03; }
-    .flash.info    { background: #cff4fc; color: #055160; }
-    label { display:block; margin-top:.75rem; font-weight:600; }
-    input[type=text], input[type=password] { width:100%; padding:.5rem;
-           box-sizing:border-box; }
-    .errors { color:#842029; font-size:.9rem; margin:.25rem 0; }
-    button { margin-top:1rem; padding:.5rem 1rem; cursor:pointer; }
+    :root{
+      --leather:#5a3a22; --leather-dark:#3d2717; --parchment:#f2e3c6;
+      --parchment-dark:#e4cfa1; --saloon-red:#8b2e2e; --gold:#c8a24a;
+      --ink:#2c1c0f;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family:"Special Elite",Courier,monospace; color:var(--ink);
+      background:
+        repeating-linear-gradient(90deg,#0000 0 38px,#0000000a 38px 40px),
+        radial-gradient(circle at 50% -10%,#fff6e0 0,var(--parchment) 45%,var(--parchment-dark) 100%);
+      min-height:100vh; margin:0; line-height:1.55;
+    }
+    .wrap{max-width:44rem;margin:0 auto;padding:0 1rem 3rem}
+    header.saloon{
+      background:linear-gradient(var(--leather),var(--leather-dark));
+      color:var(--parchment); border-bottom:4px solid var(--gold);
+      box-shadow:0 4px 0 #0004;
+    }
+    header.saloon .inner{max-width:44rem;margin:0 auto;padding:1rem}
+    .brand{font-family:"Rye",serif;font-size:1.9rem;letter-spacing:.5px;
+           color:var(--gold);text-shadow:2px 2px 0 #0006;margin:0}
+    .brand small{display:block;font-family:"Special Elite";font-size:.8rem;
+           color:var(--parchment);letter-spacing:2px;text-transform:uppercase}
+    nav.trail{margin-top:.6rem;display:flex;flex-wrap:wrap;gap:.25rem .9rem}
+    nav.trail a{color:var(--parchment);text-decoration:none;font-size:1rem;
+           border-bottom:2px dotted transparent;padding:.1rem 0}
+    nav.trail a:hover{border-bottom-color:var(--gold);color:#fff}
+    h1{font-family:"Rye",serif;color:var(--leather-dark);
+       text-shadow:1px 1px 0 #0002;margin-top:1.4rem}
+    .warn-banner{background:var(--saloon-red);color:#fff;text-align:center;
+       font-size:.85rem;padding:.35rem;letter-spacing:.5px}
+    .flash{padding:.55rem .8rem;border-radius:.3rem;margin:.6rem 0;
+       border:2px solid #0003;font-weight:bold}
+    .flash.success{background:#dff0d0;color:#2f5217}
+    .flash.danger {background:#f6d3d0;color:#7a1f1f}
+    .flash.warning{background:#f7e7bf;color:#6b4a06}
+    .flash.info   {background:#d8ecf3;color:#0f4a5a}
+    label{display:block;margin-top:.8rem;font-weight:bold;color:var(--leather-dark)}
+    input[type=text],input[type=password],textarea{
+       width:100%;padding:.55rem;border:2px solid var(--leather);
+       border-radius:.3rem;background:#fffdf5;font-family:inherit;font-size:1rem}
+    .errors{color:var(--saloon-red);font-size:.9rem;margin:.25rem 0;font-weight:bold}
+    button,input[type=submit]{
+       margin-top:1rem;padding:.55rem 1.3rem;cursor:pointer;font-family:"Rye",serif;
+       background:linear-gradient(var(--gold),#a9832f);color:#2c1c0f;
+       border:2px solid var(--leather-dark);border-radius:.3rem;
+       font-size:1rem;box-shadow:2px 2px 0 #0004}
+    button:hover,input[type=submit]:hover{filter:brightness(1.08)}
+    article.post{background:#fffdf5;border:2px solid var(--leather);
+       border-left:8px solid var(--gold);border-radius:.3rem;
+       padding:.6rem .85rem;margin:.7rem 0;box-shadow:2px 2px 0 #0002}
+    pre{background:#2c1c0f;color:#e8d9b5;padding:.6rem;border-radius:.3rem;
+       overflow:auto;white-space:pre-wrap}
+    table{background:#fffdf5}
+    a{color:var(--saloon-red)}
+    footer.dust{text-align:center;color:#7a5a3a;font-size:.8rem;margin-top:2rem}
   </style>
 </head>
 <body>
-  <nav>
-    <a href="{{ url_for('index') }}">Start</a>
-    {% if session.get('user') %}
-      <a href="{{ url_for('dashboard') }}">Dashboard</a>
-      <a href="{{ url_for('logout') }}">Logout ({{ session['user'] }})</a>
-    {% else %}
-      <a href="{{ url_for('login') }}">Login</a>
-      <a href="{{ url_for('register') }}">Register</a>
-    {% endif %}
-  </nav>
-  <hr>
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for cat, msg in messages %}
-      <div class="flash {{ cat }}">{{ msg }}</div>
-    {% endfor %}
-  {% endwith %}
-  {% block content %}{% endblock %}
+  <div class="warn-banner">⚠️ Absichtlich verwundbares Lehr-Lab — nur im vertrauenswürdigen Kurs-Netz, NIE öffentlich!</div>
+  <header class="saloon">
+    <div class="inner">
+      <h1 class="brand">🤠 Cowboy-Forum <small>Wo die schnellsten Cursor im Wilden Web reiten</small></h1>
+      <nav class="trail">
+        <a href="{{ url_for('index') }}">🏠 Saloon</a>
+        {% if session.get('user') %}
+          {% if has_endpoint is defined and has_endpoint('board') %}
+            <a href="{{ url_for('board') }}">📜 Anschlagbrett</a>{% endif %}
+          {% if has_endpoint is defined and has_endpoint('search') %}
+            <a href="{{ url_for('search') }}">🔍 Steckbrief-Suche</a>{% endif %}
+          {% if has_endpoint is defined and has_endpoint('disclaimer') %}
+            <a href="{{ url_for('disclaimer') }}">📄 Kleingedrucktes</a>{% endif %}
+          {% if has_endpoint is defined and has_endpoint('dashboard') %}
+            <a href="{{ url_for('dashboard') }}">⭐ Mein Ranch</a>{% endif %}
+          <a href="{{ url_for('logout') }}">🚪 Abhauen ({{ session['user'] }})</a>
+        {% else %}
+          <a href="{{ url_for('login') }}">🐎 Einreiten</a>
+          <a href="{{ url_for('register') }}">✍️ Anheuern</a>
+          {% if has_endpoint is defined and has_endpoint('login_legacy') %}
+            <a href="{{ url_for('login_legacy') }}">🚪 Hintertür ⚠️</a>{% endif %}
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+    <footer class="dust">— Cowboy-Forum · Hacking-mit-Python-Lab · Howdy, Partner —</footer>
+  </div>
 </body>
 </html>

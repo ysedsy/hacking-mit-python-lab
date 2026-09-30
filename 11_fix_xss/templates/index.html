@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Start · Hacking-Lab{% endblock %}
+{% block content %}
+  <h1>🤠 Willkommen im Cowboy-Forum</h1>
+  <p>Ordner 11: ✅ Fix gegen XSS: Auto-Escaping, Content-Security-Policy, HttpOnly-Cookie.</p>
+  {% if user %}
+    <p>Eingeloggt als <strong>{{ user }}</strong>.</p>
+  {% else %}
+    <p><a href="{{ url_for('register') }}">Registriere</a> dich oder
+       <a href="{{ url_for('login') }}">logge dich ein</a>.</p>
+  {% endif %}
+{% endblock %}

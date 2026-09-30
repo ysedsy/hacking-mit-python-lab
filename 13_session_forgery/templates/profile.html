@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Steckbrief · Cowboy-Forum{% endblock %}
+{% block content %}
+  <h1>⭐ Mein Steckbrief</h1>
+  <p>Aktuelle Bio: <strong>{{ bio or "(leer)" }}</strong></p>
+
+  {# FIX: POST-Formular mit CSRF-Token via form.hidden_tag() #}
+  <form method="post">
+    {{ form.hidden_tag() }}
+    {{ form.bio.label }}
+    {{ form.bio() }}
+    {{ form.submit() }}
+  </form>
+
+  <hr>
+  <p style="color:#8b2e2e">⚠️ Zum Vergleich existiert noch die unsichere GET-Route
+     <code>/set-bio?bio=...</code> — siehe README und <code>csrf_attack.html</code>.</p>
+{% endblock %}

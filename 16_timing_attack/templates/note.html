@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Notiz · Cowboy-Forum{% endblock %}
+{% block content %}
+  <h1>🔒 Private Notiz #{{ note.id }}</h1>
+  <p>Gehört User-ID: <strong>{{ note.user_id }}</strong>
+     {% if safe %}<span style="color:#0a0">(Owner-Check ✅)</span>
+     {% else %}<span style="color:#b00">(KEIN Owner-Check ⚠️)</span>{% endif %}</p>
+  <article class="post">{{ note.secret_text }}</article>
+  <p><a href="{{ url_for('note_vuln', nid=note.id) }}">/note/{{ note.id }}</a> ·
+     <a href="{{ url_for('note_safe', nid=note.id) }}">/note-safe/{{ note.id }}</a></p>
+{% endblock %}

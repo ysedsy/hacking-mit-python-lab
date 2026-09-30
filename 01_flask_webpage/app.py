@@ -104,6 +104,16 @@ def logout():
     return redirect(url_for("index"))
 
 
+@app.context_processor
+def _nav_helpers():
+    # Erlaubt der Cowboy-Nav, Links nur zu zeigen, wenn es die Route gibt.
+    return {"has_endpoint": lambda ep: ep in app.view_functions}
+
+
 if __name__ == "__main__":
-    # Nur lokal! debug=True nur in der Lernumgebung.
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    # Gruppen-Lab: standardmäßig im Netz erreichbar (0.0.0.0), damit die anderen
+    # aus dem Kurs die Lücken ausprobieren können. NUR im vertrauenswürdigen Netz!
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "5000"))
+    print(f" * 🤠 Cowboy-Forum reitet auf http://{host}:{port}  (nur im Kurs-Netz!)")
+    app.run(host=host, port=port, debug=True)

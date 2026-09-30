@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}User-Suche (sicher) · Hacking-Lab{% endblock %}
+{% block content %}
+  <h1>User-Suche <span style="color:#0a0">✅ parametrisiert</span></h1>
+  <form method="post">
+    {{ form.hidden_tag() }}
+    {{ form.q(placeholder="z.B. alice") }}
+    {{ form.submit() }}
+    {% for e in form.q.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+  </form>
+
+  {% if results is not none %}
+    <p><strong>{{ results|length }} Treffer:</strong></p>
+    <table border="1" cellpadding="4" style="border-collapse:collapse">
+      <tr><th>ID</th><th>Username</th></tr>
+      {% for row in results %}
+        <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+
+  <hr>
+  <p>Ein Payload wie <code>%' UNION SELECT username, password_hash FROM users --</code>
+     liefert hier <strong>0 Treffer</strong>: die Eingabe ist ein gebundener Wert,
+     kein SQL-Code.</p>
+{% endblock %}

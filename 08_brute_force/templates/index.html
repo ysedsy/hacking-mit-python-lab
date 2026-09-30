@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Start · Hacking-Lab{% endblock %}
+{% block content %}
+  <h1>🤠 Willkommen im Cowboy-Forum</h1>
+  <p>Ordner 08: ⚠️ Brute Force gegen den ungebremsten Login (Playwright/Hydra/Burp). Fix in 09.</p>
+ode> und/d
+  {% if user %}
+    <p>Eingeloggt als <strong>{{ user }}</strong>.</p>
+  {% else %}
+    <p><a href="{{ url_for('register') }}">Registriere</a> dich oder
+       <a href="{{ url_for('login') }}">logge dich ein</a>.</p>
+  {% endif %}
+{% endblock %}

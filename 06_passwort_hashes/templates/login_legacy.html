@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Legacy-Login · Hacking-Lab{% endblock %}
+{% block content %}
+  <h1>Legacy-Login <span style="color:#b00">⚠️ verwundbar</span></h1>
+  <p>Alt-Login mit Roh-SQL, ohne 2FA. Auth-Bypass-Payload im Benutzernamen:
+     <code>' OR '1'='1' --</code> (Passwortfeld egal).</p>
+  <form method="post">
+    <label>Benutzername</label>
+    <input type="text" name="username">
+    <label>Passwort</label>
+    <input type="password" name="password">
+    <button type="submit">Einloggen</button>
+  </form>
+
+  {% if sql %}
+    <p><strong>Ausgeführtes SQL:</strong></p>
+    <pre style="background:#8881;padding:.5rem;border-radius:.4rem;white-space:pre-wrap">{{ sql }}</pre>
+  {% endif %}
+  {% if error %}<div class="flash danger">{{ error }}</div>{% endif %}
+{% endblock %}

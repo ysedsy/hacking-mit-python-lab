@@ -4,3 +4,7 @@ __pycache__/
 *.db
 users.json
 .secrets.baseline
+*.log
+loot.log
+hashes.txt
+hashes_only.txt

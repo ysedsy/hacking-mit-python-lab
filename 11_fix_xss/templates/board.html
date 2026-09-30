@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Anschlagbrett · Cowboy-Forum{% endblock %}
+{% block content %}
+  <h1>📜 Anschlagbrett</h1>
+  <p>Aushänge von allen Reitern im Forum. Nagel deinen eigenen Steckbrief dran, Partner.</p>
+
+  <form method="post">
+    {{ form.hidden_tag() }}
+    {{ form.content.label }}
+    {{ form.content(rows=3) }}
+    {% for e in form.content.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+    {{ form.submit() }}
+  </form>
+
+  <hr>
+  {% for post in posts %}
+    <article class="post">
+      <strong>🤠 {{ post.author.username }}</strong>
+      <small>· {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+      {# Fix: KEIN |safe -> Jinja2 escaped. <script> wird als Text angezeigt.
+         Zusätzlich blockt die CSP (app.py) inline-Skripte als zweite Schicht. #}
+      <p style="margin:.4rem 0 0">{{ post.content }}</p>
+    </article>
+  {% else %}
+    <p>Noch keine Aushänge. Der Saloon ist still wie eine Geisterstadt.</p>
+  {% endfor %}
+{% endblock %}
