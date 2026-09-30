@@ -1,0 +1,32 @@
+# Zeilenenden vereinheitlichen: im Repo immer LF, beim Auschecken OS-gerecht.
+* text=auto eol=lf
+
+# Explizit textuelle Dateien (LF im Repo)
+*.py     text eol=lf
+*.html   text eol=lf
+*.txt    text eol=lf
+*.md     text eol=lf
+*.css    text eol=lf
+*.js     text eol=lf
+*.json   text eol=lf
+*.cfg    text eol=lf
+*.ini    text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+
+# Windows-Batch/PowerShell brauchen CRLF
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+*.ps1    text eol=crlf
+
+# Binärdateien nicht anfassen
+*.db     binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.zip    binary
