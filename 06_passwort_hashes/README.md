@@ -1,7 +1,13 @@
-# Ordner 06 — Passwortangriff auf die Hashes (offline)
+# Ordner 06 — Storage-Fix (Hashing) + Passwortangriff auf die Hashes (offline)
 
-Schließt den Bogen aus Ordner 05: die per SQL-Injection extrahierten
-**Passwort-Hashes** werden hier **offline** geknackt. Nur gegen die eigenen Lab-Hashes.
+Zwei Dinge in einem Schritt — genau der Übergang *unsicher → sicher*:
+
+1. **Der Fix:** In den Ordnern 01–05 lagen die Passwörter **im Klartext** (per
+   SQL-Injection in Ordner 05 sogar direkt auslesbar). Ab hier werden sie **gehasht**
+   gespeichert (Werkzeug PBKDF2) — Klartext steht nicht mehr in der DB.
+2. **Die Grenze des Fixes:** Hashing allein schützt nicht vor **schwachen Passwörtern**.
+   Wer an die Hashes kommt (z. B. via SQLi), knackt sie **offline**. Genau das wird hier
+   geübt — nur gegen die eigenen Lab-Hashes.
 
 ## Hashes besorgen
 ```powershell

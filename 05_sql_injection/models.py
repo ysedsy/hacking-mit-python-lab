@@ -11,7 +11,8 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(32), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(256), nullable=False)
+    # WARNUNG: ABSICHTLICH KLARTEXT (unsicher). Hashing als Fix ab Ordner 06.
+    password = db.Column(db.String(256), nullable=False)
     # 2FA: TOTP-Secret (Base32). enabled erst, wenn der User den ersten Code bestätigt.
     totp_secret = db.Column(db.String(64), nullable=True)
     totp_enabled = db.Column(db.Boolean, default=False, nullable=False)

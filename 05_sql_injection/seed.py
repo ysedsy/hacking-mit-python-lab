@@ -1,6 +1,5 @@
-"""Testdaten für das SQLi-Lab. Legt ein paar User mit Passwort-Hashes an."""
-from werkzeug.security import generate_password_hash
-
+"""Testdaten fuer das SQLi-Lab. Passwoerter hier absichtlich im KLARTEXT
+(unsicher, wie im Aufgaben-Status). Hashing kommt als Fix ab Ordner 06."""
 from app import app
 from models import db, User
 
@@ -11,7 +10,7 @@ with app.app_context():
         if not User.query.filter_by(username=uname).first():
             db.session.add(User(
                 username=uname,
-                password_hash=generate_password_hash(pw),
+                password=pw,   # WARNUNG: Klartext (unsicher)
                 totp_enabled=False,
             ))
     db.session.commit()

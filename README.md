@@ -32,6 +32,32 @@ python app.py         # -> http://<deine-LAN-IP>:5000
 - **Firewall:** Windows fragt beim ersten Start, ob Python im Netz kommunizieren darf —
   im Kurs-Netz erlauben, danach wieder sperren.
 
+## Datenbank: MySQL (Anforderung) oder SQLite (Zero-Config-Fallback)
+Die Aufgabe verlangt **MySQL**. Der DB-Typ wird über die Umgebungsvariable
+`DATABASE_URL` gewählt — der App-Code bleibt dank ORM (SQLAlchemy) identisch:
+
+```powershell
+# 1) MySQL/MariaDB vorbereiten (einmalig, im MySQL-Client):
+#    CREATE DATABASE hackinglab CHARACTER SET utf8mb4;
+#    CREATE USER 'lab'@'%' IDENTIFIED BY 'lab';
+#    GRANT ALL PRIVILEGES ON hackinglab.* TO 'lab'@'%';
+
+# 2) Vor dem Start die DB-URL setzen (Treiber PyMySQL ist in requirements.txt):
+$env:DATABASE_URL = "mysql+pymysql://lab:lab@localhost:3306/hackinglab"
+python app.py     # Tabellen werden per db.create_all() automatisch angelegt
+```
+
+- **Ohne** gesetztes `DATABASE_URL` startet jeder Ordner sofort mit einer lokalen
+  **SQLite**-Datei (`hackinglab.db`) — praktisch fürs schnelle Ausprobieren.
+- Für die Abgabe/Vorführung gemäß Anforderung: `DATABASE_URL` auf MySQL setzen.
+- Die **SQL-Injection funktioniert bei beiden** DB-Typen (Roh-SQL bleibt Roh-SQL);
+  UNION-Payloads auf `sqlite_master` sind SQLite-spezifisch, unter MySQL nutzt man
+  `information_schema.tables`.
+
+> ⚠️ **Passwörter:** In den Ordnern **01–05 absichtlich im Klartext** gespeichert
+> (unsicher, wie im Aufgaben-Status). Ab **Ordner 06** wird auf **Hashing** umgestellt
+> (der Fix) — Prinzip des Labs: *erst unsicher, dann sicher.*
+
 ## Skripte gegen Mitspieler richten (CTF im Kurs)
 Jede/r betreibt die eigene verwundbare Instanz; ihr greift euch **gegenseitig** an.
 Alle Angriffs-Skripte nehmen das Ziel als Parameter (oder `TARGET_URL`-Umgebungsvariable),
@@ -71,7 +97,7 @@ python 10_xss/collector.py         # sammelt in loot.log
 | 03 | `03_user_content_board` | Anschlagbrett mit Content aller User | Feature |
 | 04 | `04_zwei_faktor_auth` | 2FA (TOTP) bei der Registrierung | Feature |
 | 05 | `05_sql_injection` | SQL-Injection + Burp-Handhabung | ⚠️ Angriff |
-| 06 | `06_passwort_hashes` | Hashes offline knacken (Hashcat/John/OphCrack) | ⚠️ Angriff |
+| 06 | `06_passwort_hashes` | Storage-Fix: Klartext→Hash; dann Hashes offline knacken | ✅ Fix + ⚠️ Angriff |
 | 07 | `07_fix_sql_injection` | Fix SQLi (`text()` mit `:`), bandit/detect-secrets | ✅ Fix |
 | 08 | `08_brute_force` | Brute Force (Playwright/Hydra/Burp) | ⚠️ Angriff |
 | 09 | `09_fix_brute_force` | Fix: Rate-Limit + Account-Lockout | ✅ Fix |

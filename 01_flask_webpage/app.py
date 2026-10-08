@@ -4,7 +4,8 @@ Feature-Stand:
   * Login / Register
   * Sessions (server-signiertes Cookie via SECRET_KEY)
   * WTForms mit Feld-Validierung (siehe forms.py)
-  * Passwörter werden gehasht gespeichert (Werkzeug PBKDF2)
+  * WARNUNG: Passwoerter werden hier ABSICHTLICH im Klartext gespeichert (unsicher,
+    wie im Aufgaben-Status). Hashing kommt spaeter als Fix (Ordner 06_passwort_hashes).
 
 Speicherung: hier noch eine einfache JSON-Datei. In Ordner 02 wird das durch eine
 echte SQL-Datenbank (SQLAlchemy) ersetzt.
@@ -16,7 +17,6 @@ from functools import wraps
 from flask import (
     Flask, render_template, redirect, url_for, session, flash, abort
 )
-from werkzeug.security import generate_password_hash, check_password_hash
 
 from forms import RegisterForm, LoginForm
 
@@ -72,7 +72,8 @@ def register():
             flash("Benutzername ist bereits vergeben.", "danger")
         else:
             users[uname] = {
-                "password_hash": generate_password_hash(form.password.data),
+                # WARNUNG: Klartext (unsicher) - Fix (Hashing) in Ordner 06.
+                "password": form.password.data,
             }
             save_users(users)
             flash("Registrierung erfolgreich. Bitte einloggen.", "success")
@@ -86,7 +87,8 @@ def login():
     if form.validate_on_submit():
         users = load_users()
         user = users.get(form.username.data.strip())
-        if user and check_password_hash(user["password_hash"], form.password.data):
+        # WARNUNG: Klartext-Vergleich (unsicher) - Fix in Ordner 06.
+        if user and user.get("password") == form.password.data:
             session.clear()
             session["user"] = form.username.data.strip()
             flash("Willkommen zurück!", "success")

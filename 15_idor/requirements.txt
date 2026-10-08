@@ -9,3 +9,5 @@ qrcode>=7.4
 bandit>=1.7
 detect-secrets>=1.5
 flask-limiter>=3.5
+# MySQL-Treiber (Aufgabe verlangt MySQL); SQLite bleibt Zero-Config-Fallback
+PyMySQL>=1.1

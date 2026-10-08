@@ -6,7 +6,8 @@ Erste Stufe des Labs. Eine minimale, **saubere** Flask-App als Fundament.
 - **Login / Register** (`/login`, `/register`)
 - **Sessions** über signiertes Cookie (`SECRET_KEY`)
 - **WTForms** mit Feld-Validierung (`forms.py`) — Länge, erlaubte Zeichen, Passwort-Bestätigung
-- **Passwort-Hashing** mit Werkzeug (PBKDF2) — Klartext wird nie gespeichert
+- ⚠️ **Passwörter im Klartext** (absichtlich unsicher, wie im Aufgaben-Status) — das
+  **Hashing kommt später als Fix** in Ordner 06
 - `form.hidden_tag()` liefert nebenbei schon den CSRF-Token (Details: Ordner 12)
 
 Speicherung: einfache `users.json`. Ab **Ordner 02** ersetzt eine echte SQL-Datenbank
@@ -26,7 +27,7 @@ python app.py
 |---|---|
 | Field Validation / WTForms | `forms.py` |
 | Sessions | `session[...]` in `app.py` |
-| Passwort-Hashing | `generate_password_hash` / `check_password_hash` |
+| Passwort-Speicherung (hier: Klartext, unsicher) | `password` in `users.json` |
 | Login-Schutz per Decorator | `login_required` in `app.py` |
 
 > Hinweis: `SECRET_KEY` hier als Default im Code — das ist bewusst der Anknüpfungspunkt

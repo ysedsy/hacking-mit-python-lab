@@ -1,15 +1,15 @@
-"""Ordner 05 — SQL-Injection-Szenario (ABSICHTLICH VERWUNDBAR).
+"""Ordner 06 — Storage-Fix (Hashing) + Angriff auf die Hashes (offline).
 
-⚠️ Dieser Ordner enthält BEWUSST unsichere Queries. Nur lokal, nur zum Lernen!
-Der Fix folgt in Ordner 07.
+Neu gegenüber Ordner 05: Passwörter werden jetzt **gehasht** gespeichert
+(Werkzeug PBKDF2) statt im Klartext — der Storage-Fix (siehe register/seed).
 
-Evolution gegenüber Ordner 04: zwei neue, verwundbare Stellen mit ROH-SQL
-(String-Verkettung statt Parameter):
+⚠️ Die verwundbaren Roh-SQL-Stellen aus Ordner 05 bleiben absichtlich erhalten,
+damit man die Hashes überhaupt extrahieren kann (der SQLi-Fix kommt erst in 07):
 
-  * /search        -> UNION-/Boolean-Injection, um Daten (auch Hashes) zu ziehen
+  * /search        -> UNION-/Boolean-Injection, um die Hashes zu ziehen
   * /login-legacy  -> Auth-Bypass mit  ' OR '1'='1' --  (umgeht sogar 2FA!)
 
-Alle anderen Routen (ORM-basiert) bleiben sicher — das zeigt den Kontrast.
+Die extrahierten Hashes werden dann offline geknackt (John/Hashcat, siehe README).
 """
 import io
 import os

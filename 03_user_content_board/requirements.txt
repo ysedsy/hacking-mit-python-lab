@@ -4,3 +4,5 @@ Flask-SQLAlchemy>=3.1
 SQLAlchemy>=2.0
 WTForms>=3.1
 Werkzeug>=3.0
+# MySQL-Treiber (Aufgabe verlangt MySQL); SQLite bleibt Zero-Config-Fallback
+PyMySQL>=1.1

@@ -11,7 +11,6 @@ import os
 from functools import wraps
 
 from flask import Flask, render_template, redirect, url_for, session, flash
-from werkzeug.security import generate_password_hash, check_password_hash
 
 from models import db, User
 from forms import RegisterForm, LoginForm
@@ -70,7 +69,8 @@ def register_routes(app: Flask) -> None:
             else:
                 user = User(
                     username=uname,
-                    password_hash=generate_password_hash(form.password.data),
+                    # WARNUNG: Klartext speichern (unsicher) - Fix (Hashing) in Ordner 06.
+                    password=form.password.data,
                 )
                 db.session.add(user)
                 db.session.commit()
@@ -84,7 +84,8 @@ def register_routes(app: Flask) -> None:
         if form.validate_on_submit():
             uname = form.username.data.strip()
             user = User.query.filter_by(username=uname).first()
-            if user and check_password_hash(user.password_hash, form.password.data):
+            # WARNUNG: Klartext-Vergleich (unsicher) - Fix in Ordner 06.
+            if user and user.password == form.password.data:
                 session.clear()
                 session["user"] = user.username
                 flash("Willkommen zurück!", "success")
