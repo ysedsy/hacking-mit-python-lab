@@ -105,6 +105,7 @@ class FakeSession:
 def make_scanner(vuln):
     sc = A.Scanner("http://sim", session=FakeSession(vuln))
     sc.anon_sess = FakeSession(vuln)   # cookie-lose Session fuer den BAC-Check
+    sc.session_factory = lambda: FakeSession(vuln)   # frische Sessions fuer SQLi-Proben
     # Eingabepunkte, die der Crawler sonst selbst faende:
     sc.targets = [
         A.Target("GET", "http://sim/search", {"q": "test"}, "q", "query", "http://sim/search?q=test"),
@@ -163,6 +164,25 @@ def main():
         if verdict == A.VULN:
             print("    !! FALSCH: gepatchtes Ziel als verwundbar gemeldet")
             failures += 1
+
+    # Signup-Formulare werden NICHT aktiv befüllt (keine Müll-Accounts).
+    print("\n== Signup-Formular wird uebersprungen ==")
+    sc = A.Scanner("http://sim", session=FakeSession(True))
+    login = {"action": "/login", "method": "POST", "inputs": [
+        {"name": "username", "type": "text", "value": ""},
+        {"name": "password", "type": "password", "value": ""}]}
+    signup = {"action": "/register", "method": "POST", "inputs": [
+        {"name": "username", "type": "text", "value": ""},
+        {"name": "password", "type": "password", "value": ""},
+        {"name": "password_confirm", "type": "password", "value": ""}]}
+    sc.pages = [("http://sim/login", FakeResp(), [login]),
+                ("http://sim/register", FakeResp(), [signup])]
+    sc._build_targets()
+    actions = {t.url for t in sc.targets}
+    login_ok = "http://sim/login" in actions
+    signup_skipped = "http://sim/register" not in actions and sc.skipped_signup == 1
+    print(f"  Login gefuzzt: {login_ok} | Register uebersprungen: {signup_skipped}")
+    failures += not (login_ok and signup_skipped)
 
     print("\nERGEBNIS:", "alle Checks korrekt" if failures == 0 else f"{failures} Fehler")
     return 1 if failures else 0

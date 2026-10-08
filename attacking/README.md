@@ -28,12 +28,16 @@ python attack_all.py --base http://ziel:5000 --cookie "session=..."   # auth. Sc
 2. Jeder Check läuft gegen diese Punkte (bzw. gegen die Seite global). Fehlt ein
    Angriffspunkt, meldet der Check **n/a** statt eines Fehlers.
 
+**Registrier-Formulare** (2+ Passwortfelder oder ein „confirm/wiederholen"-Feld)
+werden **nicht aktiv befüllt** — sonst würde jeder Payload einen Müll-Account
+anlegen. Login-Formulare (ein Passwortfeld) werden normal getestet.
+
 ## Was geprüft wird
 | Check | Angriff / Heuristik | Lab-Bezug |
 |-------|---------------------|-----------|
 | Security-Header | CSP, `X-Content-Type-Options`, Clickjacking-Schutz | 11 |
 | Cookie-Flags | `Secure`, `HttpOnly`, `SameSite` pro Cookie | 11/13 |
-| SQL-Injection | einzelnes Quote → 500 / SQL-Fehler, + Boolean-Differential | 05/07 |
+| SQL-Injection | ~17 gängige Payloads: SQL-Fehler, 500, Auth-Bypass (Login-Redirect), Boolean-Differential + zeit-blind (SLEEP/pg_sleep/WAITFOR) | 05/07 |
 | Reflected XSS | `<svg/onload>`-Marker ungeescaped reflektiert? | 10/11 |
 | Server-Side Template Injection | wird `{{123*456}}` serverseitig ausgerechnet? | — |
 | OS-Command-Injection | zeit-blind: verzögert `; sleep 4` die Antwort? | — |

