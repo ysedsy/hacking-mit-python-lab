@@ -3,13 +3,13 @@
 {% block content %}
   <h1>🤠 Willkommen im Cowboy-Forum</h1>
   <p>Der Treffpunkt für Rancher, Reiter und Pferdenarren. Feilsche um Ponys,
-     schwing dich in den Sattel und tausch dich am Anschlagbrett aus.</p>
+     schwing dich in den Sattel und tausch dich im Forum aus.</p>
   {% if session.get('user') %}
     <p>Schön, dass du wieder da bist, <strong>{{ session['user'] }}</strong>!
        Schau doch mal in den <a href="{{ url_for('ponies.list_ponys') }}">Ponyverkauf</a>.</p>
   {% else %}
-    <p>Neu in der Stadt? <a href="{{ url_for('register') }}">Heuer an</a> oder
-       <a href="{{ url_for('login') }}">reite ein</a>.</p>
+    <p>Neu in der Stadt? <a href="{{ url_for('register') }}">Registrieren</a> oder
+       <a href="{{ url_for('login') }}">anmelden</a>.</p>
   {% endif %}
 
   <h2>🐴 Frisch im Stall</h2>

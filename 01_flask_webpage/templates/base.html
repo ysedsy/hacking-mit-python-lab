@@ -81,20 +81,20 @@
     <div class="inner">
       <h1 class="brand">🤠 Cowboy-Forum <small>Ponyhandel &amp; Treffpunkt im Wilden Web</small></h1>
       <nav class="trail">
-        <a href="{{ url_for('index') }}">🏠 Saloon</a>
+        <a href="{{ url_for('index') }}">🏠 Start</a>
         {% if has_endpoint is defined and has_endpoint('ponies.list_ponys') %}
-          <a href="{{ url_for('ponies.list_ponys') }}">🐴 Ponyverkauf</a>{% endif %}
+          <a href="{{ url_for('ponies.list_ponys') }}">🐴 Ponys</a>{% endif %}
         {% if session.get('user') %}
           {% if has_endpoint is defined and has_endpoint('board') %}
-            <a href="{{ url_for('board') }}">📜 Anschlagbrett</a>{% endif %}
+            <a href="{{ url_for('board') }}">📜 Forum</a>{% endif %}
           {% if has_endpoint is defined and has_endpoint('disclaimer') %}
-            <a href="{{ url_for('disclaimer') }}">📄 Kleingedrucktes</a>{% endif %}
+            <a href="{{ url_for('disclaimer') }}">📄 Rechtliches</a>{% endif %}
           {% if has_endpoint is defined and has_endpoint('dashboard') %}
-            <a href="{{ url_for('dashboard') }}">⭐ Meine Ranch</a>{% endif %}
-          <a href="{{ url_for('logout') }}">🚪 Abhauen ({{ session['user'] }})</a>
+            <a href="{{ url_for('dashboard') }}">⭐ Dashboard</a>{% endif %}
+          <a href="{{ url_for('logout') }}">🚪 Abmelden ({{ session['user'] }})</a>
         {% else %}
-          <a href="{{ url_for('login') }}">🐎 Einreiten</a>
-          <a href="{{ url_for('register') }}">✍️ Anheuern</a>
+          <a href="{{ url_for('login') }}">🐎 Anmelden</a>
+          <a href="{{ url_for('register') }}">✍️ Registrieren</a>
         {% endif %}
       </nav>
     </div>
