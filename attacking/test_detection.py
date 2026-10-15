@@ -38,8 +38,14 @@ class FakeSession:
         self.vuln = vuln
         self.login_attempts = 0
         if vuln:
-            # Flask-aehnliches, klartext-lesbares Payload-Cookie, ohne Flags.
-            self.cookies = [FakeCookie("session", "eyJ1c2VyIjoiYWRtaW4ifQ.aaa.bbb")]
+            # Echter, mit schwachem SECRET_KEY 'cowboy' signierter Flask-Cookie,
+            # damit der Forgery-Check greift. Fallback auf Dummy, falls
+            # itsdangerous/flask fehlt (dann meldet der Check nur N/A).
+            try:
+                val = A._forge_session("cowboy", {"user": "admin"})
+            except Exception:
+                val = "eyJ1c2VyIjoiYWRtaW4ifQ.aaa.bbb"
+            self.cookies = [FakeCookie("session", val)]
             self._set_cookie = "session=...; Path=/"
         else:
             self.cookies = [FakeCookie("session", "opaque-random-xyz", secure=True,
@@ -156,6 +162,16 @@ def main():
     got = v.get("Session-Cookie lesbar", "FEHLT")
     print(f"  {got:4}  Session-Cookie lesbar" + ("" if got == A.INFO else "   !! erwartet INFO"))
     failures += got != A.INFO
+    # Session-Forgery: schwacher SECRET_KEY 'cowboy' -> Cookie faelschbar.
+    # (N/A ist ok, falls itsdangerous/flask nicht installiert ist.)
+    try:
+        import itsdangerous  # noqa: F401
+        want = A.VULN
+    except Exception:
+        want = A.NA
+    got = v.get("Session-Forgery (schwacher SECRET_KEY)", "FEHLT")
+    print(f"  {got:4}  Session-Forgery" + ("" if got == want else f"   !! erwartet {want}"))
+    failures += got != want
 
     print("\n== Gepatchtes Ziel (kein VULN erlaubt) ==")
     s = verdicts(vuln=False)

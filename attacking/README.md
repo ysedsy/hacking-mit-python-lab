@@ -20,6 +20,7 @@ python attack_all.py --base http://192.168.1.42:5000       # Mitspieler:in im Ku
 # Optionen
 python attack_all.py --base http://ziel:5000 --max-pages 40 --max-targets 60
 python attack_all.py --base http://ziel:5000 --cookie "session=..."   # auth. Scan
+python attack_all.py --base http://ziel:5000 --forge-user admin       # Ziel-ID f. Forgery
 ```
 
 ## Ablauf
@@ -51,6 +52,7 @@ anlegen. Login-Formulare (ein Passwortfeld) werden normal getestet.
 | Debug-/Stacktrace-Leak | Werkzeug-Debugger / Traceback auf Fehlerseiten | — |
 | Tech-Disclosure | `Server`/`X-Powered-By` verrät Stack (info) | — |
 | Session-Cookie lesbar | Cookie-Payload base64/JSON-lesbar (info) | 13 |
+| Session-Forgery | Flask-Session mit schwachem/bekanntem `SECRET_KEY` signiert? → Cookie fälschbar, Identität frei wählbar (per `--forge-user`), aktive Bestätigung gegen geschützte Seite | 13 |
 
 **Verdikte:** `[!!] VERWUNDBAR` (mit Schweregrad kritisch/hoch/mittel/niedrig),
 `[ok] sicher`, `[--] n/a` (Angriffspunkt in dieser Instanz nicht vorhanden),
@@ -62,6 +64,16 @@ und eine gepatchte Instanz (kanned Antworten, kein echter Server/Angriff):
 ```powershell
 python test_detection.py
 # -> "alle Checks korrekt"
+```
+
+## Passendes Übungs-Ziel
+Die bewusst verwundbare Übungs-App und die Challenge-Beschreibung zum
+**Session-Forgery**-Check liegen im eigenen Ordner
+[`../challenge_session_forgery/`](../challenge_session_forgery/) (App + `challenge.md`).
+Von dort starten, dann den Scanner dagegen laufen lassen:
+```powershell
+python ..\challenge_session_forgery\app.py                 # http://127.0.0.1:5001
+python attack_all.py --base http://127.0.0.1:5001 --forge-user admin
 ```
 
 ## Hinweis
