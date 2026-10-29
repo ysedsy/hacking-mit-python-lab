@@ -27,6 +27,7 @@ $env:HOST = "0.0.0.0"; python app.py
 | [`challenge_stored_xss`](challenge_stored_xss/) | Stored XSS (A03 Injection) | Script in die Ticket-Beschreibung schmuggeln, das bei Betrachtern feuert | 5002 | leicht–mittel |
 | [`challenge_file_upload`](challenge_file_upload/) | Unrestricted File Upload (A04/A05) | `.html`/`.svg` hochladen, das im App-Origin JavaScript ausführt | 5006 | mittel |
 | [`challenge_session_forgery`](challenge_session_forgery/) | Session-Fälschung (A02 Crypto Failures) | Flask-Session-Cookie mit schwachem `SECRET_KEY` selbst signieren → als `admin` einloggen | 5001 | mittel |
+| [`challenge_session_puppetry`](challenge_session_puppetry/) | Session-Abuse → Privilege Escalation (A01 Broken Access Control) | Über ein ungeplantes Feld `rang=marshal` die Session manipulieren (ohne `SECRET_KEY`) und ins Marshal-Büro kommen | 5007 | mittel |
 | [`challenge_jwt`](challenge_jwt/) | JWT-Fälschung (A02/A07) | Token via `alg:none` oder schwachem Secret auf `role=admin` fälschen | 5004 | mittel |
 | [`challenge_ssti`](challenge_ssti/) | Server-Side Template Injection → RCE (A03) | Über das Namensfeld Server-Code ausführen (`{{7*7}}` → `whoami`) | 5003 | mittel–schwer |
 
