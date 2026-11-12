@@ -161,6 +161,27 @@ PROTECTED_GUESS = [
 CSRF_FIELD = re.compile(r"(csrf|xsrf|_token|authenticity|nonce)", re.I)
 # Felder, die ein Registrier-/Signup-Formular verraten (Passwort-Bestätigung).
 SIGNUP_FIELD = re.compile(r"(confirm|wiederhol|repeat|password2|pass2|bestaetig|bestätig)", re.I)
+# ----------------------------------------------------- Mass Assignment
+# Sensible Felder, die ein Formular NICHT anbietet, ein Server aber evtl. trotzdem
+# ungefiltert ins Konto uebernimmt (user.update(request.form)). Name -> truthy Wert.
+PRIV_FIELDS = [
+    ("is_admin", "1"), ("is_admin", "true"), ("admin", "1"), ("is_staff", "1"),
+    ("is_superuser", "1"), ("superuser", "1"), ("role", "admin"), ("roles", "admin"),
+    ("usertype", "admin"), ("user_type", "admin"), ("account_type", "admin"),
+    ("group", "admin"), ("level", "admin"), ("access_level", "admin"),
+    ("privilege", "admin"), ("is_active", "1"), ("verified", "1"),
+]
+# Pfade, die typischerweise nur Admins/privilegierten Konten offenstehen.
+ADMIN_PATHS = ["/admin", "/admin/", "/administrator", "/dashboard", "/panel",
+               "/manage", "/backend", "/staff", "/superuser", "/admin/users"]
+# Mitglieder-Seiten, auf denen sich ein uebernommenes Rechte-Flag spiegeln kann.
+MEMBER_PATHS = ["/profile", "/account", "/me", "/konto", "/uebersicht", "/dashboard"]
+# Signaturen eines erreichten Admin-Bereichs (nur eindeutige Fragmente).
+ADMIN_MARKERS = ("admin-bereich", "administrator", "admin area", "admin panel",
+                 "admin dashboard", "benutzerverwaltung", "superuser", "ist admin")
+# Ein uebernommenes "Admin/true"-Flag, wie es eine Profilseite spiegeln koennte.
+FLAG_TRUE = re.compile(r"(is_?admin|is_?staff|is_?superuser|role|privilege|level)"
+                       r"\s*[=:]\s*(?:<[^>]*>\s*)*(true|1|yes|admin|ja)", re.I)
 # Sensible Pfade, die nicht ausgeliefert werden sollten.
 SENSITIVE_FILES = [
     "/.git/config", "/.git/HEAD", "/.env", "/config.py", "/settings.py", "/app.py",
@@ -226,6 +247,7 @@ class Scanner:
         self.bodies = []       # gesammelte (url, text) für Disclosure-Scan
         self.targets = []      # [Target]
         self.login_forms = []  # Formulare mit Passwort-Feld
+        self.account_forms = []  # Konto-Formulare (Passwort-Feld): Login + Signup, fuer Mass-Assignment
 
     # ---------------------------------------------------------- Low-Level
     def _same_origin(self, url):
@@ -313,6 +335,10 @@ class Scanner:
                     SIGNUP_FIELD.search(i["name"]) for i in form["inputs"])
                 if pw and not signup:
                     self.login_forms.append((action, form, baseline))
+                if pw or signup:
+                    # Konto-anlegende/-prüfende Formulare fuer den Mass-Assignment-Check.
+                    # (Signup-Formulare haben evtl. kein type=password, aber ein confirm-Feld.)
+                    self.account_forms.append((action, form, baseline))
                 if signup:
                     # Registrier-Formulare NICHT aktiv befüllen (würde Accounts anlegen).
                     self.skipped_signup += 1
@@ -331,7 +357,7 @@ class Scanner:
                     self.check_ssti, self.check_cmdi, self.check_traversal,
                     self.check_open_redirect, self.check_cors, self.check_csrf,
                     self.check_brute_force, self.check_session_cookie,
-                    self.check_session_forgery):
+                    self.check_session_forgery, self.check_mass_assignment):
             try:
                 findings.extend(chk())
             except RequestException as e:
@@ -929,6 +955,144 @@ class Scanner:
                 return _finding("Session-Forgery bestaetigt", VULN,
                                 f"gefaelschter Cookie oeffnet {p} (HTTP 200, "
                                 f"eingeloggt als {self.forge_user!r})", CRIT, p)
+        return None
+
+    # ----------------------------------------------------- Mass Assignment
+    def check_mass_assignment(self):
+        """Mass Assignment: uebernimmt die Registrierung ungefragt Rechte-Felder?
+
+        Legt pro Konto-Formular ein Kontroll-Konto (nur user/pw) und ein
+        praepariertes Konto (zusaetzlich geschmuggelte Felder wie is_admin=1) an
+        und vergleicht beider Zugriff. Bekommt NUR das praeparierte Konto einen
+        Admin-Bereich bzw. ein gespiegeltes Admin-Flag, hat der Server das
+        versteckte Feld ungefiltert ins Konto uebernommen (allowlist fehlt).
+
+        Aktiver Eingriff: legt wenige Konten mit Zufallsnamen an. Das Kontroll-
+        Konto belegt gleichzeitig, dass Registrierung/Login hier reproduzierbar
+        sind -- sonst meldet der Check n/a statt eines Fehlalarms.
+        """
+        forms, seen = [], set()
+        for action, form, baseline in self.account_forms:
+            if action in seen:
+                continue
+            seen.add(action)
+            if any(i["type"] == "password" for i in form["inputs"]) or \
+                    any(SIGNUP_FIELD.search(i["name"]) for i in form["inputs"]):
+                forms.append((action, form, baseline))
+        if not forms:
+            return [_finding("Mass Assignment", NA, "kein Konto-/Registrier-Formular gefunden")]
+
+        admin_paths = list(ADMIN_PATHS)
+        for url, _r, _f in self.pages:              # entdeckte admin-artige Pfade ergaenzen
+            path = urlsplit(url).path
+            if re.search(r"(admin|dashboard|manage|panel|staff|backend)", path, re.I) \
+                    and path not in admin_paths:
+                admin_paths.append(path)
+
+        reproducible = False
+        for action, form, baseline in forms[:2]:
+            user_field = self._username_field(form)
+            pw_field = next((i["name"] for i in form["inputs"]
+                             if i["type"] == "password"), None)
+            if not user_field:
+                continue
+            ctrl = self._ma_register(action, form, baseline, user_field, pw_field, {})
+            if not ctrl or not self._ma_authenticated(ctrl, user_field):
+                continue                            # Registrierung/Login hier nicht reproduzierbar
+            reproducible = True
+            ctrl_view = self._ma_view(ctrl["sess"], admin_paths)
+
+            combo = dict(PRIV_FIELDS)               # alle Rechte-Felder in EINER Probe
+            evil = self._ma_register(action, form, baseline, user_field, pw_field, combo)
+            if not evil:
+                continue
+            signal = self._ma_escalated(ctrl, ctrl_view, evil,
+                                        self._ma_view(evil["sess"], admin_paths))
+            if not signal:
+                continue                            # dieses Formular filtert korrekt
+
+            # Treffer -> einzeln nachstellen, um die konkreten Felder zu benennen.
+            culprits = []
+            for name, val in PRIV_FIELDS:
+                e = self._ma_register(action, form, baseline, user_field, pw_field, {name: val})
+                if e and self._ma_escalated(ctrl, ctrl_view, e,
+                                            self._ma_view(e["sess"], admin_paths)):
+                    culprits.append(f"{name}={val}")
+            fields = ", ".join(culprits) if culprits else "Kombination mehrerer Felder"
+            return [_finding("Mass Assignment", VULN,
+                             f"{action}: geschmuggeltes Feld ({fields}) wird ungefiltert "
+                             f"ins Konto uebernommen -> {signal}", CRIT, action)]
+
+        if not reproducible:
+            return [_finding("Mass Assignment", NA,
+                             "Registrierung/Login nicht reproduzierbar (kein Konto anlegbar)")]
+        return [_finding("Mass Assignment", SAFE,
+                         f"{min(len(forms), 2)} Konto-Formular(e): keine Rechte-Felder uebernommen")]
+
+    def _ma_register(self, action, form, baseline, user_field, pw_field, extra):
+        """Legt EIN Konto mit Zufallsnamen an (frische Session) und gibt dessen
+        Zustand zurueck. Passwort-/Bestaetigungsfelder werden konsistent gefuellt,
+        `extra` ueberschreibt zuletzt (die geschmuggelten Felder)."""
+        user, pw = "zz" + _tag(6), "Passw0rt!Aa9"
+        data = dict(baseline)
+        for i in form["inputs"]:                    # Passwort + confirm gleich fuellen
+            if i["type"] == "password" or SIGNUP_FIELD.search(i["name"]):
+                data[i["name"]] = pw
+        data[user_field] = user
+        if pw_field:
+            data[pw_field] = pw
+        data.update(extra)
+        try:
+            sess = self.session_factory()
+            r = sess.post(action, data=data, timeout=self.timeout, allow_redirects=True)
+        except RequestException:
+            return None
+        return {"sess": sess, "user": user,
+                "status": getattr(r, "status_code", 0),
+                "body": (getattr(r, "text", "") or "").lower()}
+
+    def _ma_authenticated(self, info, user_field):
+        """Gilt das Konto als eingeloggt? (Landing zeigt den Namen / Logout / kein
+        Login-Formular mehr.) Belegt zugleich, dass Registrierung hier greift."""
+        body = info["body"]
+        if info["status"] not in (200, *_REDIRECT_CODES):
+            return False
+        logged = (info["user"] in body or LOGOUT_SIG.search(body)
+                  or FLAG_TRUE.search(body))
+        still_form = 'type="password"' in body   # Registrier-/Login-Formular erneut gezeigt
+        return bool(logged and not still_form)
+
+    def _ma_view(self, sess, admin_paths):
+        """Holt admin- und mitglieder-artige Pfade mit DIESER Konto-Session."""
+        view = {}
+        for p in list(dict.fromkeys(admin_paths + MEMBER_PATHS)):
+            try:
+                r = sess.get(urljoin(self.base + "/", p),
+                             timeout=self.timeout, allow_redirects=False)
+            except RequestException:
+                continue
+            view[p] = (getattr(r, "status_code", 0),
+                       (getattr(r, "text", "") or "").lower())
+        return view
+
+    def _ma_escalated(self, ctrl, ctrl_view, evil, evil_view):
+        """Hat NUR das praeparierte Konto mehr Rechte? Gibt ein Signal-Text oder None."""
+        # (A) Admin-Bereich: praepariertes Konto drin, Kontroll-Konto nicht.
+        for p, (es, eb) in evil_view.items():
+            cs, cb = ctrl_view.get(p, (0, ""))
+            e_marker = any(m in eb for m in ADMIN_MARKERS)
+            c_marker = any(m in cb for m in ADMIN_MARKERS)
+            if es == 200 and e_marker and not (cs == 200 and c_marker):
+                return f"oeffnet Admin-Bereich {p} (HTTP 200)"
+            if es == 200 and e_marker is False and cs != 200 and p in ADMIN_PATHS:
+                return f"erreicht {p} (HTTP 200), Kontroll-Konto HTTP {cs or '—'}"
+        # (B) Gespiegeltes Rechte-Flag: true beim praeparierten, false/absent beim Kontroll-Konto.
+        if FLAG_TRUE.search(evil["body"]) and not FLAG_TRUE.search(ctrl["body"]):
+            return "Profil spiegelt uebernommenes Admin-Flag (is_admin=true)"
+        for p, (es, eb) in evil_view.items():
+            cs, cb = ctrl_view.get(p, (0, ""))
+            if es == 200 and FLAG_TRUE.search(eb) and not (cs == 200 and FLAG_TRUE.search(cb)):
+                return f"{p} spiegelt uebernommenes Admin-Flag"
         return None
 
 

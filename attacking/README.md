@@ -30,8 +30,11 @@ python attack_all.py --base http://ziel:5000 --forge-user admin       # Ziel-ID 
    Angriffspunkt, meldet der Check **n/a** statt eines Fehlers.
 
 **Registrier-Formulare** (2+ Passwortfelder oder ein „confirm/wiederholen"-Feld)
-werden **nicht aktiv befüllt** — sonst würde jeder Payload einen Müll-Account
-anlegen. Login-Formulare (ein Passwortfeld) werden normal getestet.
+werden beim Payload-Fuzzing **nicht aktiv befüllt** — sonst würde jeder Payload
+einen Müll-Account anlegen. Login-Formulare (ein Passwortfeld) werden normal
+getestet. **Ausnahme:** der *Mass-Assignment*-Check legt gezielt wenige Konten
+mit Zufallsnamen an (Kontroll- vs. präpariertes Konto) — anders lässt sich das
+ungefilterte Übernehmen eines Rechte-Felds nicht nachweisen.
 
 ## Was geprüft wird
 | Check | Angriff / Heuristik | Lab-Bezug |
@@ -46,6 +49,7 @@ anlegen. Login-Formulare (ein Passwortfeld) werden normal getestet.
 | Path-Traversal/LFI | `../etc/passwd`, `win.ini`, `app.py`-Signaturen | 14 |
 | Open Redirect | Parameter `next/url/redirect/...` → externe URL? | — |
 | CORS-Fehlkonfiguration | spiegelt `Access-Control-Allow-Origin` eine beliebige Origin? | — |
+| Mass Assignment | Registrierung übernimmt geschmuggeltes Rechte-Feld (`is_admin=1`, `role=admin` …)? Kontroll- vs. präpariertes Konto, aktive Bestätigung über Admin-Bereich/gespiegeltes Flag | — |
 | CSRF-Token | POST-Formular ohne Anti-CSRF-Token-Feld | 12 |
 | Brute-Force-Schutz | viele Fehl-Logins ohne Lockout/Rate-Limit/429? | 08/09 |
 | Sensible Dateien | `/.git/config`, `/.env`, `/config.py`, Backups … erreichbar? | — |

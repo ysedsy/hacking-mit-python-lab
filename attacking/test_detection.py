@@ -108,6 +108,62 @@ class FakeSession:
         return FakeResp("not found", status=404)              # Catch-all/Random
 
 
+class FakeAccountSession:
+    """Zustandsbehaftete Fake-Registrierung fuer den Mass-Assignment-Check.
+
+    Teilt sich den Konten-Speicher `users` (dict username->is_admin); jede Instanz
+    ist EIN Konto mit eigener Identitaet. `vuln=True` uebernimmt ein geschmuggeltes
+    is_admin ungefiltert; `vuln=False` nutzt eine Allowlist (ignoriert Extra-Felder).
+    """
+
+    def __init__(self, users, vuln):
+        self.users = users
+        self.vuln = vuln
+        self.user = None
+
+    def _truthy(self, v):
+        return str(v).lower() in ("1", "true", "on", "yes", "admin")
+
+    def _profile(self, user):
+        flag = self.users.get(user, False)
+        return FakeResp(f"<div>Hallo, {user}. is_admin=<b>{flag}</b></div>")
+
+    def post(self, url, data=None, allow_redirects=True, **kw):
+        data = data or {}
+        user = data.get("username", "")
+        is_admin = self.vuln and self._truthy(data.get("is_admin", ""))  # nur verwundbar
+        self.users[user] = is_admin
+        self.user = user
+        return self._profile(user)                 # Registrierung loggt ein -> Profil
+
+    def get(self, url, params=None, allow_redirects=True, **kw):
+        path = urlsplit(url).path or "/"
+        if path == "/admin":
+            if self.user and self.users.get(self.user):
+                return FakeResp("<h2>Admin-Bereich</h2> Benutzerverwaltung")
+            return FakeResp("", status=302, headers={"Location": "/dashboard"})
+        if path in ("/profile", "/", "/account", "/dashboard"):
+            return self._profile(self.user)
+        return FakeResp("", status=404)
+
+
+def ma_verdict(vuln):
+    users = {}
+    sc = A.Scanner("http://sim", session=FakeAccountSession(users, vuln))
+    sc.session_factory = lambda: FakeAccountSession(users, vuln)
+    form = {"action": "http://sim/register", "method": "POST", "inputs": [
+        {"name": "username", "type": "text", "value": ""},
+        {"name": "password", "type": "password", "value": ""}]}
+    sc.account_forms = [("http://sim/register", form,
+                         {"username": "test", "password": "Passwort123!"})]
+    sc.pages = []
+    best, rank = None, {A.VULN: 0, A.INFO: 1, A.SAFE: 2, A.NA: 3}
+    for f in sc.check_mass_assignment():
+        if best is None or rank[f.verdict] < rank[best]:
+            best = f.verdict
+    return best
+
+
 def make_scanner(vuln):
     sc = A.Scanner("http://sim", session=FakeSession(vuln))
     sc.anon_sess = FakeSession(vuln)   # cookie-lose Session fuer den BAC-Check
@@ -199,6 +255,15 @@ def main():
     signup_skipped = "http://sim/register" not in actions and sc.skipped_signup == 1
     print(f"  Login gefuzzt: {login_ok} | Register uebersprungen: {signup_skipped}")
     failures += not (login_ok and signup_skipped)
+
+    # Mass Assignment: uebernimmt die Registrierung ein geschmuggeltes is_admin?
+    print("\n== Mass Assignment (praepariertes Konto wird Admin) ==")
+    for vuln, want in ((True, A.VULN), (False, A.SAFE)):
+        got = ma_verdict(vuln)
+        ok = got == want
+        label = "verwundbar" if vuln else "gepatcht  "
+        print(f"  {got:4}  {label}" + ("" if ok else f"   !! erwartet {want}"))
+        failures += not ok
 
     print("\nERGEBNIS:", "alle Checks korrekt" if failures == 0 else f"{failures} Fehler")
     return 1 if failures else 0
