@@ -225,6 +225,11 @@ def uebersicht():
 application = DispatcherMiddleware(root.wsgi_app, MOUNTS)
 
 
+def _ascii(text):
+    # Windows-Konsole = cp1252: Nicht-ASCII (z.B. "->") wuerde print() crashen.
+    return text.encode("ascii", "replace").decode("ascii")
+
+
 if __name__ == "__main__":
     from werkzeug.serving import run_simple
     host = os.environ.get("HOST", "127.0.0.1")
@@ -232,5 +237,5 @@ if __name__ == "__main__":
     print("[!] UEBUNGS-LAB-HUB: buendelt verwundbare Apps - nur lokal/autorisiert.")
     print(f"[i] Launcher auf http://{host}:{port}  ({len(ENTRIES)} Challenges, ein Port)")
     for pfx, vuln, *_ in ENTRIES:
-        print(f"    {pfx:<22} {vuln}")
+        print(_ascii(f"    {pfx:<22} {vuln}"))
     run_simple(host, port, application, threaded=True)
