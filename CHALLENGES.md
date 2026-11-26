@@ -40,6 +40,20 @@ $env:HOST = "0.0.0.0"; python app.py
 | [`challenge_ssti`](challenges/challenge_ssti/) | Server-Side Template Injection → RCE (A03) | Über das Namensfeld Server-Code ausführen (`{{7*7}}` → `whoami`) | 5003 | mittel–schwer |
 | [`challenge_pickle`](challenges/challenge_pickle/) | Insecure Deserialization (A08 Integrity Failures) | Präpariertes `pickle`-Cookie (`__reduce__`) → Server führt Code aus (harmloser Marker) | 5012 | mittel–schwer |
 
+## Alles auf einem Port: der Hub
+- [`challenges/hub/`](challenges/hub/) — ein **Launcher** auf **einem Port**
+  (Standard `5000`). Der Hub lädt die unveränderten `challenge_*/app.py` und
+  mountet jede unter einem eigenen Prefix (`/mass_assignment`, `/ssti`, …); die
+  Startseite verlinkt alle Challenges und zeigt die Aufgaben (ohne Lösungen).
+  ```powershell
+  cd challenges/hub
+  pip install -r requirements.txt
+  python hub.py                 # http://127.0.0.1:5000
+  ```
+  Eine schmale WSGI-Middleware biegt feste Links, Redirects und Cookie-Pfade auf
+  den jeweiligen Prefix um — die einzelnen Apps bleiben unverändert und laufen
+  weiterhin auch einzeln (`cd challenge_<name> && python app.py`).
+
 ## Zusätzlich im Repo
 - [`attacking/`](attacking/) — generischer Web-Schwachstellen-Scanner
   (`attack_all.py`), der viele dieser Lücken automatisch findet, inkl.
