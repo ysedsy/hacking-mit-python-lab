@@ -21,15 +21,24 @@ $env:HOST = "0.0.0.0"; python app.py
 
 ## Übersicht
 
+> **Alle Aufgaben auf einer Seite (ohne Lösungen):**
+> [`challenges/index.html`](challenges/index.html) — im Browser öffnen. Die Seite
+> wird aus den `challenge.md`-Dateien erzeugt (`cd challenges && python build_index.py`).
+
 | Challenge | Lücke (OWASP) | Angriffsziel | Port | Niveau |
 |-----------|----------------|--------------|------|--------|
-| [`challenge_mass_assignment`](challenge_mass_assignment/) | Mass Assignment (A01 Broken Access Control) | Mit Extra-Feld `is_admin=1` bei der Registrierung Admin werden | 5005 | leicht |
-| [`challenge_stored_xss`](challenge_stored_xss/) | Stored XSS (A03 Injection) | Script in die Ticket-Beschreibung schmuggeln, das bei Betrachtern feuert | 5002 | leicht–mittel |
-| [`challenge_file_upload`](challenge_file_upload/) | Unrestricted File Upload (A04/A05) | `.html`/`.svg` hochladen, das im App-Origin JavaScript ausführt | 5006 | mittel |
+| [`challenge_mass_assignment`](challenges/challenge_mass_assignment/) | Mass Assignment (A01 Broken Access Control) | Mit Extra-Feld `is_admin=1` bei der Registrierung Admin werden | 5005 | leicht |
+| [`challenge_stored_xss`](challenges/challenge_stored_xss/) | Stored XSS (A03 Injection) | Script in die Ticket-Beschreibung schmuggeln, das bei Betrachtern feuert | 5002 | leicht–mittel |
+| [`challenge_business_logic`](challenges/challenge_business_logic/) | Business-Logic-Fehler (A04 Insecure Design) | Über eine negative Menge im Shop den 500-Gold-Sheriffstern für 50 Gold kaufen | 5009 | leicht–mittel |
+| [`challenge_race_condition`](challenges/challenge_race_condition/) | Race Condition / TOCTOU (A04 Insecure Design) | Durch parallele Auszahlungen mehr Gold abheben, als auf dem Konto liegt | 5008 | mittel |
 | [`challenge_session_forgery`](challenge_session_forgery/) | Session-Fälschung (A02 Crypto Failures) | Flask-Session-Cookie mit schwachem `SECRET_KEY` selbst signieren → als `admin` einloggen | 5001 | mittel |
-| [`challenge_session_puppetry`](challenge_session_puppetry/) | Session-Abuse → Privilege Escalation (A01 Broken Access Control) | Über ein ungeplantes Feld `rang=marshal` die Session manipulieren (ohne `SECRET_KEY`) und ins Marshal-Büro kommen | 5007 | mittel |
-| [`challenge_jwt`](challenge_jwt/) | JWT-Fälschung (A02/A07) | Token via `alg:none` oder schwachem Secret auf `role=admin` fälschen | 5004 | mittel |
-| [`challenge_ssti`](challenge_ssti/) | Server-Side Template Injection → RCE (A03) | Über das Namensfeld Server-Code ausführen (`{{7*7}}` → `whoami`) | 5003 | mittel–schwer |
+| [`challenge_session_puppetry`](challenges/challenge_session_puppetry/) | Session-Abuse → Privilege Escalation (A01 Broken Access Control) | Über ein ungeplantes Feld `rang=marshal` die Session manipulieren (ohne `SECRET_KEY`) und ins Marshal-Büro kommen | 5007 | mittel |
+| [`challenge_password_reset`](challenges/challenge_password_reset/) | Schwaches Reset-Token (A07 Auth Failures) | Vorhersagbares Reset-Token (Zeitstempel) raten und das Konto `marshal` übernehmen | 5010 | mittel |
+| [`challenge_file_upload`](challenges/challenge_file_upload/) | Unrestricted File Upload (A04/A05) | `.html`/`.svg` hochladen, das im App-Origin JavaScript ausführt | 5006 | mittel |
+| [`challenge_jwt`](challenges/challenge_jwt/) | JWT-Fälschung (A02/A07) | Token via `alg:none` oder schwachem Secret auf `role=admin` fälschen | 5004 | mittel |
+| [`challenge_ssrf`](challenges/challenge_ssrf/) | Server-Side Request Forgery (A10) | Den Importer eine interne URL (`/intern`) abrufen lassen, die von außen `403` liefert | 5011 | mittel |
+| [`challenge_ssti`](challenges/challenge_ssti/) | Server-Side Template Injection → RCE (A03) | Über das Namensfeld Server-Code ausführen (`{{7*7}}` → `whoami`) | 5003 | mittel–schwer |
+| [`challenge_pickle`](challenges/challenge_pickle/) | Insecure Deserialization (A08 Integrity Failures) | Präpariertes `pickle`-Cookie (`__reduce__`) → Server führt Code aus (harmloser Marker) | 5012 | mittel–schwer |
 
 ## Zusätzlich im Repo
 - [`attacking/`](attacking/) — generischer Web-Schwachstellen-Scanner
